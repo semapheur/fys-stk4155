@@ -1,0 +1,10 @@
+title: ""
+author: ""
+
+# LaTeX settings
+bibtex_bibfiles:
+   - references.bib
+latex:
+  latex_engine: "xelatex"
+  latex_documents:
+    targetname: book.tex
