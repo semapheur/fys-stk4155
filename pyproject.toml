@@ -1,0 +1,22 @@
+[mypy]
+explicit_package_bases = true
+#namespace_packages = false
+
+[tool.ruff]
+indent-width = 2
+
+[tool.ruff.format]
+quote-style = "double"
+
+[project]
+name = "fys-stk4155"
+version = "0"
+dependencies = [
+  "jupyter-book"
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy",
+  "ruff",
+]

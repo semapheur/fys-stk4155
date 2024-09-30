@@ -1,0 +1,9 @@
+format: jb-article
+root: index
+sections:
+- file: docs/introduction
+- file: docs/method
+- file: docs/results
+- file: docs/discussion
+- file: docs/conclusion
+- file: docs/appendix

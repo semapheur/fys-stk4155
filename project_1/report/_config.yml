@@ -1,4 +1,4 @@
-title: ""
+title: "Project 1"
 author: ""
 
 # LaTeX settings
@@ -7,4 +7,4 @@ bibtex_bibfiles:
 latex:
   latex_engine: "xelatex"
   latex_documents:
-    targetname: book.tex
+    targetname: report.tex
