@@ -32,63 +32,61 @@ Structure of the report
 
 ## The Franke Equation
 
-```{math}
-:label: equation-1
+$$
+\label{equation-1}
 \begin{align*}
   f(x,y) =& \frac{3}{4} \exp\left(-\frac{(9x - 2)^2}{4} - \frac{(9y - 2)^2}{4} \right) + \frac{3}{4}\exp\left(\frac{(9x + 1)^2}{49} - \frac{9y + 1}{10}\right) \\
   &+ \frac{1}{2}\exp\left(-\frac{(9x - 7)^2}{4} - \frac{(9y - 3)^2}{4} \right) - \frac{1}{5}\exp\left(-(9x - 4)^2 - (9y - 7)^2 \right)
 \end{align*}
-```
+$$
 
 ## Linear Regression
 
 Consider a statistical experiment with an input variable $\mathbf{x}\in X\subseteq \R^p$ of $p$ covariates producing a real response $y\in Y\subseteq \R$. Taking $n$ samples of the experiment produces a labeled training set
 
-```{math}
+$$
   S = \Set{(\mathbf{x}_i, y_i) \in X\times Y | X\subseteq \R^p, Y\subseteq\R }_{i=1}^n
-```
+$$
 
-The aim of regression analysis is predict future responses using some function $f: X\to\R$ estimated from the training set $S$, i.e., $f(\mathbf{x}_i) \approx y_i$. Linear regression assumes a linear relationship between $X$ and $Y$ affected by Gaussian noise. This linearity is modeled through an error variable $\epsilon\sim\mathcal{N}(0,\sigma^2)$ having zero-mean Gaussian distribution with variance $\sigma^2$. For each sample $i=1,\dots,n$, the model takes the form
+The aim of regression analysis is predict future responses using some function $f: X\to\R$ such that $f(\mathbf{x}_i) \approx y_i$ for each $i = 1,\dots,n$  by solving an optimization algorithm applied on the training set $S$. Linear regression assumes a linear relationship between $X$ and $Y$ that is subject to Gaussian noise. This linearity is modeled through an error variable $\epsilon\sim\mathcal{N}(0,\sigma^2)$ having zero-mean Gaussian distribution with variance $\sigma^2$. For each sample $i=1,\dots,n$, the model takes the form
 
-```{math}
-:label: equation-2
+$$
+\label{equation-2}
 \mathbf{y}_i = \beta_0 + \left(\sum_{j=1}^p \mathbf{x}_{ij} \beta_j \right) + \epsilon_i = \beta_0 + \mathbf{x}_i^\top \boldsymbol{\beta} + \epsilon_i
-```
+$$
 
 where $\boldsymbol{\beta} = \left[\begin{smallmatrix} \beta_1 & \dots & \beta_p \end{smallmatrix}\right]^\top$ is the *regression parameter*. Each regression coefficient $\beta_j$ measures the effect of a unit change in covariate vector $x_{ij}$, while keeping all other covariates fixed. In machine learning lingo, $\boldsymbol{\beta}$ represents the weights of the feature inputs. The intercept term $\beta_0$ represents a *bias* of the model, and specifies the response for $\mathbf{x}$. Furthermore, each $\epsilon_i$ is assumed to be independent, i.e. $\operatorname{cov}(\epsilon_i, \epsilon_j) = 0$ for $i\neq j$.
 
 The linear regression model can be written more compactly in the matrix form
 
-```{math}
-:label: equation-3
+$$
+\label{equation-3}
 \mathbf{y} = \mathbf{X}\boldsymbol{\beta}' + \boldsymbol{\epsilon}
-```
+$$
 
 where $\boldsymbol{\beta}' = \left[\begin{smallmatrix} \beta_0 & \boldsymbol{\beta} \end{smallmatrix}\right]^\top \in \R^{p+1}$, $\boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}_p, \sigma^2 \mathbf{I}_n)$ and
 
-```{math}
+$$
   \mathbf{X} = \begin{bmatrix}
     1 & x_{11} & \cdots & x_{1p} \\
     \vdots & \vdots & \ddots & \vdots \\
     1 & x_{n1} & \cdots & x_{np}
   \end{bmatrix}
-```
+$$
 
 The $n\times(p+1)$-matrix $\mathbf{X}$ is usually called the *design matrix*. Equation [](#equation-3) shows that the model is linear in $\boldsymbol{\beta}$. This means that the design matrix $\mathbb{X}$ can be fitted to $\mathbf{y}$ using non-linear functions $f$, such as polynomials.
 
 The dependence on the Gaussian noise term $\boldsymbol{\epsilon}$ implies that $\mathbf{y}$ is a random variable with Gaussian distribution. The expected value of $y_i$ is given by
 
-```{math}
+$$
 \begin{align*}
   \mathbb{E}(y_i) =& \mathbb{E}\left(\epsilon_i + \sum_{j=0}^p \mathbf{x}_{ij} \beta_j  \right) = \underbrace{\mathbb{E}(\epsilon_i)}_{=0} + \sum_{j=0}^p \mathbb{E}(x_{ij} \beta_j) = \sum_{j=0}^p x_{ij} \beta_j = \mathbf{X}_{i,*} \boldsymbol{\beta}
 \end{align*}
-```
+$$
 
-which follows from linearity of the expected value, and the fact that $\mathbf{X}\boldsymbol{\beta}$ is deterministic (non-random).
+which follows from linearity of the expected value, and the fact that $\mathbf{X}\boldsymbol{\beta}$ is deterministic (non-random). The variance of $y_i$ is given by
 
-The variance of $y_i$ is given by
-
-```{math}
+$$
 \begin{align*}
   \operatorname{var}(y_i) =& \mathbb{E}([y_i - \mathbb{E}(y_i)^2]) = \mathbb{E}(y_i^2) - \mathbb{E}(y_i)^2 \\
   =& \mathbb{E}[(\mathbf{X}_{i,*}\boldsymbol{\beta})^2 + 2\epsilon_i \mathbf{X}_{i,*}\boldsymbol{\beta} + \epsilon_i^2] \\
@@ -96,9 +94,73 @@ The variance of $y_i$ is given by
   =& (\mathbf{X}_{i,*} \boldsymbol{\beta})^2 + 2\mathbf{X}_{i,*}\boldsymbol{\beta}\underbrace{\mathbb{E}(\epsilon_i)}_{=0} - (\mathbf{X}_{i,*} \boldsymbol{\beta})^2 \\
   =& \mathbb{E}(\epsilon_i^2) = \operatorname{var}(\epsilon_i) = \sigma^2
 \end{align*}
-```
+$$
+
+This shows that $y_i \sim\mathcal{N}(\mathbf{X}_{i,*}\boldsymbol{\beta}, \sigma^2)$ has a Gaussian distribution with mean $\mathbf{X}_{i,*}\boldsymbol{\beta}$ and variance $\sigma^2$. The probability density function (PDF) for $y_i$ is given by
+
+$$
+\label{equation-4}
+g(y_i|\mathbf{X}\boldsymbol{\beta}, \sigma^2) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp[-\frac{(y_i - \mathbf{X}_{i,*} \boldsymbol{\beta})^2}{2\sigma^2}]
+$$
 
 ## Ordinary Least Squares (OLS)
+
+maximum likelihood estimation of $\boldsymbol{\beta}$
+
+From the PDF [](#equation-4) we get the likelihood function
+
+$$
+  L(\boldsymbol{\beta}, \sigma^2) = \prod_{i=1}^n g(y_i|\mathbf{X}\boldsymbol{\beta}, \sigma^2) = \frac{1}{\sqrt{2\pi\sigma^2}} \prod_{i=1}^n \exp\left(-\frac{1}{2\sigma^2}(y_i - \mathbf{X}_{i,*} \boldsymbol{\beta})^2\right)
+$$
+
+Since the natural logarithm is strictlity monotonic, finding the MLE of $L(\boldsymbol{\beta})$ is equivalent to minimizing the negative log-likelihood function
+
+$$
+\begin{align*}
+  \ell(\boldsymbol{\beta}, \sigma^2) =& \ln[L(\boldsymbol{\beta}, \sigma^2)] = \sum_{i=1}^n \left(\frac{1}{\sqrt{2\pi}\sigma} \exp\left[-\frac{1}{2\sigma^2} (y_i - \mathbf{X}_{i,*} \boldsymbol{\beta})^2 \right]\right) \\ 
+  =& -n \ln(\sqrt{2\pi}\sigma) - \frac{1}{2\sigma^2} \sum_{i=1}^n (y_i - \mathbf{X}_{i,*} \boldsymbol{\beta})^2 = -n \ln(\sqrt{2\pi}\sigma) - \frac{1}{2\sigma^2} \lVert \mathbf{y} - \mathbf{X}\boldsymbol{\beta} \rVert_2^2
+\end{align*}
+$$
+
+Where $\lVert \mathbf{x} \rVert_2 = \left(\sum_{i=1}^n x_i^2 \right)^{1/2} = \sqrt{\mathbf{x}^\top \mathbf{x}}$ is the $\ell_2$ norm.
+
+To find the MLE of $\boldsymbol{\beta}$, we need to solve $\nabla_{\boldsymbol{\beta}} \ell(\boldsymbol{\beta}, \sigma^2) = \mathbf{0}$. Taking the gradient with respect to $\boldsymbol{\beta}$ gives
+
+$$
+\begin{align*}
+  \nabla_{\boldsymbol{\beta}} \ell(\boldsymbol{\beta}, \sigma^2) =& \nabla_{\boldsymbol{\beta}} \left(-n \ln(\sqrt{2\pi}\sigma) - \frac{1}{2\sigma^2} \lVert \mathbf{y} - \mathbf{X}\boldsymbol{\beta} \rVert_2^2 \right) = -\frac{1}{2\sigma^2} \nabla_{\boldsymbol{\beta}} (\mathbf{y} - \mathbf{X}\boldsymbol{\beta})^\top (\mathbf{y} - \mathbf{X}\boldsymbol{\beta}) \\
+  =& -\frac{1}{2\sigma^2} \nabla_{\boldsymbol{\beta}} (\mathbf{y}^\top \mathbf{y} - 2\mathbf{y}^\top \mathbf{X}\boldsymbol{\beta} + \boldsymbol{\beta}^\top \mathbf{X}^\top \mathbf{X}\boldsymbol{\beta}) = -\frac{1}{2\sigma^2}(\mathbf{0} - 2\mathbf{X}^\top \mathbf{y} + 2\mathbf{X}^\top \mathbf{X}\boldsymbol{\beta}) \\
+  =& \frac{1}{\sigma^2} \mathbf{X}^\top (\mathbf{y} - \mathbf{X}\boldsymbol{\beta})
+\end{align*}
+$$
+
+Solving this for $0$, gives the normal equation
+
+$$
+  \hat{\boldsymbol{\beta}} = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y} = \mathbf{X}^+ \mathbb{y},
+$$
+
+where $\mathbf{X}^+ = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top$ is the Moore-Penrose inverse or pseudoinverse of $\mathbf{X}$. This particular, pseudoinverse is a left inverse, i.e. $\mathbf{X}^+ \mathbf{X} = \mathbf{I}_n$
+
+The expected value of $\hat{\boldsymbol{\beta}}$ is given by
+
+$$
+\begin{align*}
+  \mathbb{E}(\hat{\boldsymbol{\beta}}) = \mathbb{E}\left[\mathbf{X}^+ \mathbf{y}\right] = \mathbf{X}^+ \mathbf{y} \mathbb{E}(\mathbf{y}) = \mathbf{X}^+ \mathbf{X} \boldsymbol{\beta} = \boldsymbol{\beta}
+\end{align*}
+$$
+
+and the variance of $\hat{\boldsymbol{\beta}}$ is given by
+
+$$
+\begin{align*}
+  \operatorname{var}{\hat{\boldsymbol{\beta}}} =& \mathbb{E}\left([\hat{\boldsymbol{\beta}} - \mathbb{E}(\hat{\boldsymbol{\beta}})][\hat{\boldsymbol{\beta}} - \mathbb{E}(\hat{\boldsymbol{\beta}})]^\top \right) = \mathbb{E}\left([\mathbf{X}^+ \mathbf{y} - \boldsymbol{\beta}][\mathbf{X}^+ \mathbf{y} - \boldsymbol{\beta}]^\top \right) \\
+  =& \mathbf{X}^+ \mathbb{E}(\mathbf{y}\mathbf{y}^\top)\mathbf{X}(\mathbf{X}^\top \mathbf{X})^{-1} - \boldsymbol{\beta}\boldsymbol{\beta}^\top \\
+  =& \mathbf{X}^+ (\mathbf{X}\boldsymbol{\beta}\boldsymbol{\beta}^\top \mathbf{X}^\top + \sigma^2 \mathbf{I}_n) \mathbf{X}(\mathbf{X}^\top \mathbf{X})^{-1} - \boldsymbol{\beta}\boldsymbol{\beta}^\top \\
+  =& \boldsymbol{\beta}^\top \boldsymbol{\beta} + \sigma^2 (\mathbf{X}^\top \mathbf{X})^{-1} - \boldsymbol{\beta}\boldsymbol{\beta}^\top \\
+  =& \sigma^2 (\mathbf{X}^\top \mathbf{X})^{-1}
+\end{align*}
+$$
 
 ## Ridge Regression
 
