@@ -250,7 +250,7 @@ This shows that the LASSO regression estimation applies a threshold to the maxim
 
 While both ridge and LASSO regression achieves shrinkage of the regression coefficients, LASSO regression also achieves selection of regression coeffiecients. This effect follows from the fact that the $\ell_1$-norm penalty creates a diamond-like constraint surface with its cornes falling on the coordinate axes [@vanwieringen2023lecturenotesridgeregression, pp. 109-111].
 
-As outlined in @vanwieringen2023lecturenotesridgeregression [pp. 112-117], there are several numerical methods for evaluating LASSO regression estimator. This report is based on the coordinate descent method, which minimizes the LASSO log-likelihood function along the coordinates one at a time. 
+As outlined in @vanwieringen2023lecturenotesridgeregression [pp. 112-117], there are several numerical methods for evaluating LASSO regression estimator. This report is based on the coordinate descent method, which minimizes the LASSO log-likelihood function along the coordinates one at a time.
 
 # Results
 
