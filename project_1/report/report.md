@@ -110,6 +110,7 @@ maximum likelihood estimation of $\boldsymbol{\beta}$
 From the PDF [](#equation-4) we get the likelihood function
 
 $$
+\label{equation-5}
   L(\boldsymbol{\beta}, \sigma^2) = \prod_{i=1}^n g(y_i|\mathbf{X}\boldsymbol{\beta}, \sigma^2) = \frac{1}{\sqrt{2\pi\sigma^2}} \prod_{i=1}^n \exp\left(-\frac{1}{2\sigma^2}(y_i - \mathbf{X}_{i,*} \boldsymbol{\beta})^2\right)
 $$
 
@@ -134,7 +135,13 @@ $$
 \end{align*}
 $$
 
-Equating the gradient to $\mathbf{0}_n$ and solving $\boldsymbol{\beta}$, gives the normal equation
+Equating the gradient to $\mathbf{0}_n$ gives the normal equation
+
+$$
+  \mathbf{X}^\top \mathbf{X}\boldsymbol{\beta} = \mathbf{X}^\top \mathbf{y}
+$$
+
+Solving for $\boldsymbol{\beta}$ gives the maximum likehood estimate
 
 $$
   \hat{\boldsymbol{\beta}} = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y} = \mathbf{X}^+ \mathbb{y},
@@ -164,17 +171,17 @@ $$
 
 There are two main problems with maximum likelhood estimation using ordinary least squares: collinearity and overfitting. Collinearity occurs when two or more covariates are strongly linearly correlated. This makes it hard to discern the effect of collinear covariates because their impact may be intertwined. Overfitting occurs when the regression model fits to the observed noise rather than the underlying pattern. This may result in a model that generalizes poorly to novel data. 
 
-The problem of collinearlity and overfitting can be mitigated with several techniques, of which regularization and cross-validation are examined in this report. Regularization involves adding a constraint to the likelihood function that penalizes large norms of the regression parameter. The two regularization methods examined in this report are ridge regression and LASSO regression. Ridge regression adds a penalty based on the square $\ell_2$-norm of the regression coefficients and is therefore also called $\ell_2$ regularization. LASSO regression, on the other hand, adds a penalty based on the $\ell_1$-norm of the coefficients and is also called $\ell_1$ regularization.
+The problem of collinearlity and overfitting can be mitigated with several techniques, of which regularization and cross-validation are examined in this report. Regularization involves adding a constraint to the likelihood function that penalizes large norms of the regression parameter. The two regularization methods examined in this report are ridge regression and LASSO regression, where LASSO stands for "least shrinkage and selection operator". Ridge regression adds a penalty based on the square $\ell_2$-norm of the regression coefficients and is therefore also called $\ell_2$ regularization. LASSO regression, on the other hand, adds a penalty based on the $\ell_1$-norm of the coefficients and is also called $\ell_1$ regularization.
 
 ## Ridge Regression ($\ell_2$ regularization)
 
-The ridge regression estimator minimizes the ridge log-loss function, defined as:
+Ridge regression adds a regularization to the likelihood function [](#equation-5) with a penalty to the square $\ell_2$-norm of the regression coefficients:
 
 $$
-  \ell_{\text{ridge}} (\boldsymbol{\beta}; \lambda) = \lVert\mathbf{y} - \mathbf{X}\boldsymbol{\beta}\rVert_2^2 + \lambda\lVert\boldsymbol{\beta}\rVert
+  \ell_{\text{ridge}} (\boldsymbol{\beta}; \lambda) = \lVert\mathbf{y} - \mathbf{X}\boldsymbol{\beta}\rVert_2^2 + \lambda\lVert\boldsymbol{\beta}\rVert = \sum_{i=1}^n (y_i - \mathbf{X}_{i,*}\boldsymbol{\beta})^2 + \lambda \sum_{j=1}^p \beta_j^2
 $$
 
-The penalty term, $\lambda\lVert\boldsymbol{\beta}\rVert_2^2$ is called *ridge penalty* and $\lambda$ is called the *regularization term*. When $\lambda = 0$, the ridge log-loss function reduces to the MLE log-loss function.
+The penalty term, $\lambda\lVert\boldsymbol{\beta}\rVert_2^2$ is called the *ridge penalty* and $\lambda\in[0,\infty)$ is called the *regularization term*. When $\lambda = 0$, the ridge log-likelihood function reduces to [](#equation-5).
 
 To find the ridge estimator of $\boldsymbol{\beta}$, we need to solve $\nabla_{\boldsymbol{\beta}} \ell_{\text{ridge}} (\boldsymbol{\beta}, \sigma^2) = \mathbf{0}$. Taking the gradient with respect to $\boldsymbol{\beta}$ gives
 
@@ -190,8 +197,15 @@ $$
   \hat{\boldsymbol{\beta}} = (\mathbf{X}^\top \mathbf{X} + \lambda\mathbf{I}_p)^{-1} \mathbf{X}^\top \mathbf{y}
 $$
 
-
 ## LASSO Regression ($\ell_1$ regularization)
+
+LASSO regression, which stands for "last absolute shrinkage and selection operator", adds a regularization to the likelihood function [](#equation-5) with a penalty to the $\ell_1$-norm of the regression coefficients:
+
+$$
+  \mathcal{L}_{\text{LASSO}} (\boldsymbol{\beta};\lambda) = \lVert\mathbf{y} - \mathbf{X}\boldsymbol{\beta}\rVert_2^2 - \lambda\lVert\boldsymbol{\beta}\rVert_1 = \sum_{i=1}^n (y_i - \mathbf{X}_{i,*}\boldsymbol{\beta})^2 + \lambda \sum_{j=1}^p |\beta_j|,
+$$
+
+Since the abolute value is not differentiable, there is generally not an analytical expression for the LASSO estimate of $\boldsymbol{\beta}$.
 
 # Results
 
