@@ -205,9 +205,52 @@ $$
   \ell_{\text{LASSO}} (\boldsymbol{\beta};\lambda) = \lVert\mathbf{y} - \mathbf{X}\boldsymbol{\beta}\rVert_2^2 - \lambda\lVert\boldsymbol{\beta}\rVert_1 = \sum_{i=1}^n (y_i - \mathbf{X}_{i,*}\boldsymbol{\beta})^2 + \lambda \sum_{j=1}^p |\beta_j|,
 $$
 
-Since the abolute value is not differentiable, there is generally not an analytical expression for the LASSO estimate of $\boldsymbol{\beta}$.
+Since the $\ell_1$ norm $\lVert\boldsymbol{\beta}\rVert_1$ is not differentiable at $\beta = \mathbf{0}$, there are generally no analytical expressions for the LASSO estimate of $\boldsymbol{\beta}$. However, an analytic expression exists for orthonormal design matrices, i.e. $\mathbf{X}^\top \mathbf{X} = \mathbf{I}_p$. In this case, the maximum likelihood estimate is given by $\hat{\boldsymbol{\beta}} = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y} = \mathbf{X}^\top \mathbf{y}$. Using this we can rewrite the LASSO log-likelihood as
 
-As outlined in @vanwieringen2023lecturenotesridgeregression [pp. 112-117], there are several numerical methods for evaluating LASSO regression estimator. This report is based on the coordinate descent method, which minimizes the LASSO log-likelihood function along the coordinates one at a time. For the 
+$$
+\begin{align*}
+  \lVert \mathbf{y} - \mathbf{X}\boldsymbol{\beta} \rVert_2^2 + \lambda\lVert\beta\rVert_1 =& \mathbf{y}^\top \mathbf{y} - \mathbf{y}^\top \mathbf{X}\boldsymbol{\beta} - \boldsymbol{\beta}^\top \mathbf{X}^\top \mathbf{y} + \boldsymbol{\beta}\mathbf{X}^\top \mathbf{X}\boldsymbol{\beta} + \lambda \sum_{j=1}^p |\beta_j| \\
+  =& -\hat{\boldsymbol{\beta}} \boldsymbol{\beta} - \boldsymbol{\beta}^\top \hat{\boldsymbol{\beta}} + \boldsymbol{\beta}^\top \boldsymbol{\beta} + \lambda \sum_{j=1}^p |\beta_j| \\
+  =& \sum_{j=1}^p -2\hat{\beta}_j \beta_j + \beta_j^2 + \lambda |\beta_j|
+\end{align*}
+$$
+
+The LASSO estimate can be found by solving the following minimization problem for each regression coefficient:
+
+$$
+  \argmin_{\beta_j} -2\hat{\beta}_j \beta_j + \beta_j^2 + \lambda|\beta_j| = \begin{cases}
+    \argmin_{\beta_j} -2\hat{\beta}_j \beta_j + \beta_j^2 + \lambda \beta_j, \quad& \beta_j > 0 \\
+    \argmin_{\beta_j} -2\hat{\beta}_j \beta_j + \beta_j^2 - \lambda \beta_j, \quad& \beta_j < 0
+  \end{cases}
+$$
+
+Taking the partial derivative with respect to $\beta_j$ gives
+
+$$
+  \frac{\partial}{\partial\beta_j} 2\hat{\beta}_j \beta_j + \beta_j^2 \pm \lambda \beta_j = -\hat{\beta}_j + 2\beta_j - \lambda
+$$
+
+Equation this to $0$ and solving for $\hat{\beta}_j$ gives
+
+$$
+  \hat{\beta}_j (\lambda_1) = \begin{cases}
+    \hat{\beta_j} - \lambda/2, \quad& \hat{\beta}_j (\lambda) > 0 \\
+    0,\quad \hat{\beta}(\lambda) = 0
+    \hat{\beta_j} + \lambda/2, \quad& \hat{\beta}_j (\lambda) < 0
+  \end{cases}
+$$
+
+which can be wirtten more compactly as
+
+$$
+  \hat{\beta_j} = (\lambda_i) = \operatorname{sign}(\hat{\beta}_j) (|\hat{\beta}_j| - \frac{\lambda}{2})_+ =: \operatorname{SoftThreshold}(\hat{\beta}_j, \frac{\lambda}{2})
+$$
+
+This shows that the LASSO regression estimation applies a threshold to the maximum likelihood estimation.
+
+While both ridge and LASSO regression achieves shrinkage of the regression coefficients, LASSO regression also achieves selection of regression coeffiecients. This effect follows from the fact that the $\ell_1$-norm penalty creates a diamond-like constraint surface with its cornes falling on the coordinate axes [@vanwieringen2023lecturenotesridgeregression, pp. 109-111].
+
+As outlined in @vanwieringen2023lecturenotesridgeregression [pp. 112-117], there are several numerical methods for evaluating LASSO regression estimator. This report is based on the coordinate descent method, which minimizes the LASSO log-likelihood function along the coordinates one at a time. 
 
 # Results
 
