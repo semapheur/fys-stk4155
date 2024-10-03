@@ -173,7 +173,7 @@ There are two main problems with maximum likelhood estimation using ordinary lea
 
 The problem of collinearlity and overfitting can be mitigated with several techniques, of which regularization and cross-validation are examined in this report. Regularization involves adding a constraint to the likelihood function that penalizes large norms of the regression parameter. The two regularization methods examined in this report are ridge regression and LASSO regression, where LASSO stands for "least shrinkage and selection operator". Ridge regression adds a penalty based on the square $\ell_2$-norm of the regression coefficients and is therefore also called $\ell_2$ regularization. LASSO regression, on the other hand, adds a penalty based on the $\ell_1$-norm of the coefficients and is also called $\ell_1$ regularization.
 
-## Ridge Regression ($\ell_2$ regularization)
+## Ridge Regression ($\ell_2$ Regularization)
 
 Ridge regression adds a regularization to the likelihood function [](#equation-5) with a penalty to the square $\ell_2$-norm of the regression coefficients:
 
@@ -197,15 +197,17 @@ $$
   \hat{\boldsymbol{\beta}} = (\mathbf{X}^\top \mathbf{X} + \lambda\mathbf{I}_p)^{-1} \mathbf{X}^\top \mathbf{y}
 $$
 
-## LASSO Regression ($\ell_1$ regularization)
+## LASSO Regression ($\ell_1$ Regularization)
 
 LASSO regression, which stands for "last absolute shrinkage and selection operator", adds a regularization to the likelihood function [](#equation-5) with a penalty to the $\ell_1$-norm of the regression coefficients:
 
 $$
-  \mathcal{L}_{\text{LASSO}} (\boldsymbol{\beta};\lambda) = \lVert\mathbf{y} - \mathbf{X}\boldsymbol{\beta}\rVert_2^2 - \lambda\lVert\boldsymbol{\beta}\rVert_1 = \sum_{i=1}^n (y_i - \mathbf{X}_{i,*}\boldsymbol{\beta})^2 + \lambda \sum_{j=1}^p |\beta_j|,
+  \ell_{\text{LASSO}} (\boldsymbol{\beta};\lambda) = \lVert\mathbf{y} - \mathbf{X}\boldsymbol{\beta}\rVert_2^2 - \lambda\lVert\boldsymbol{\beta}\rVert_1 = \sum_{i=1}^n (y_i - \mathbf{X}_{i,*}\boldsymbol{\beta})^2 + \lambda \sum_{j=1}^p |\beta_j|,
 $$
 
 Since the abolute value is not differentiable, there is generally not an analytical expression for the LASSO estimate of $\boldsymbol{\beta}$.
+
+As outlined in @vanwieringen2023lecturenotesridgeregression [pp. 112-117], there are several numerical methods for evaluating LASSO regression estimator. This report is based on the coordinate descent method, which minimizes the LASSO log-likelihood function along the coordinates one at a time. For the 
 
 # Results
 
