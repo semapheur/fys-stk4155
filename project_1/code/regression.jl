@@ -57,28 +57,6 @@ function train_test_split(x::Matrix{Float64}, y::Vector{Float64}, train_ratio::F
 end
 
 """
-Generates a polynomial design matrix.
-
-# Parameters
-- `x::Matrix{Float64}`: The input data.
-- `degree::Int`: The degree of the polynomial.
-
-# Returns
-- `X::Matrix{Float64}`: The polynomial design matrix.
-"""
-function polynomial_design_matrix(x::Matrix{Float64}, degree::Int)::Matrix{Float64}
-  n, m = size(x)
-
-  X = ones(n, 1)
-  for j = 1:m
-    for i = 1:degree
-      X = hcat(X, x[:, j] .^ i)
-    end
-  end
-  return X
-end
-
-"""
 Calculates the R-squared value of the prediction.
 
 # Parameters
@@ -130,7 +108,7 @@ function ordinary_least_squares(
 )::Vector{Float64}
 
   # Check that x and y have the same number of rows
-  if size(x, 1) != length(y)
+  if size(X, 1) != length(y)
     throw(DimensionMismatch("X and y must have the same number of rows"))
   end
 
@@ -249,9 +227,112 @@ interpolation algorithms. It is a 2D function ``f:ℝ² → ℝ`` of the form
 where x and y are the input coordinates.
 """
 function franke(x::Float64, y::Float64)::Float64
-  term1 = 0.75 * exp(-(9 * x .- 2)^2 / 4 - (9 * y - 2)^2 / 4)
+  term1 = 0.75 * exp(-(9 * x - 2)^2 / 4 - (9 * y - 2)^2 / 4)
   term2 = 0.75 * exp(-(9 * x + 1)^2 / 49 - (9 * y + 1)^2 / 10)
   term3 = 0.5 * exp(-(9 * x - 7)^2 / 4 - (9 * y - 3)^2 / 4)
   term4 = -0.2 * exp(-(9 * x - 4)^2 - (9 * y - 7)^2)
   return term1 + term2 + term3 + term4
+end
+
+function franke_training_data(
+  n::Int,
+  noise_amplitude::Float64=0.1,
+)::Tuple{Matrix{Float64},Vector{Float64}}
+  x_1 = range(0, 1, length=n)
+  x_2 = range(0, 1, length=n)
+  Y = franke.(x_1', x_2) .+ noise_amplitude * randn(n, n)
+
+  y = vec(Y)
+
+  # Create design matrix
+  X_1 = repeat(x_1, n)
+  X_2 = repeat(x_2', n)
+  X = hcat(X_1, vec(X_2))
+
+  X_scaled = scale_data(X)
+
+  return X_scaled, y
+end
+
+"""
+Generate all combinations of polynomial terms for a given number of variables
+and degree.
+
+# Parameters
+- `variables::Int`: The number of variables.
+- `degree::Int`: The degree of the polynomial.
+
+# Returns
+- `combinations::Vector{Vector{Int}}`: A vector of vectors, where each inner vector
+  is a combination of powers of the variables, which sum up to the given degree.
+"""
+function polynomial_combinations(variables::Int, degree::Int)::Vector{Vector{Int}}
+  function generate_combinations(
+    remaining_degree::Int,
+    current_pos::Int,
+    current_combo::Vector{Int},
+  )
+    if current_pos > variables
+      # Only keep the combination if we've used all the remaining degree
+      if remaining_degree == 0
+        return [copy(current_combo)]
+      else
+        return Vector{Int}[]
+      end
+    end
+
+    combinations = Vector{Vector{Int}}()
+
+    # Try all possible degrees for the current position
+    for d = 0:remaining_degree
+      current_combo[current_pos] = d
+      append!(
+        combinations,
+        generate_combinations(remaining_degree - d, current_pos + 1, current_combo),
+      )
+    end
+
+    return combinations
+  end
+
+  # Initialize storage for all combinations across all degrees
+  all_combinations = Vector{Vector{Int}}()
+  current_combo = zeros(Int, variables)
+
+  # Generate combinations for each degree up to p
+  for degree = 0:degree
+    append!(all_combinations, generate_combinations(degree, 1, current_combo))
+  end
+
+  return all_combinations
+end
+
+"""
+Generates a polynomial design matrix.
+
+# Parameters
+- `data::Matrix{Float64}`: The input data.
+- `degree::Int`: The degree of the polynomial.
+
+# Returns
+- `design_matrix::Matrix{Float64}`: The polynomial design matrix.
+"""
+function polynomial_design_matrix(data::Matrix{Float64}, degree::Int)::Matrix{Float64}
+  n, m = size(data) # n: number of samples, m: number of features
+
+  # Create the design matrix
+  combinations = polynomial_combinations(m, degree)
+  num_terms = length(combinations)
+  design_matrix = zeros(Float64, n, num_terms)
+
+  # Fill the design matrix with polynomial features
+  for (idx, combination) in enumerate(combinations)
+    term = ones(n)  # Start with a vector of ones (constant term)
+    for (feature_index, degree) in enumerate(combination)
+      term .= term .* (data[:, feature_index] .^ degree)
+    end
+    design_matrix[:, idx] = term
+  end
+
+  return design_matrix
 end

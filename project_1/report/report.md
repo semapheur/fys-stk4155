@@ -40,6 +40,14 @@ $$
 \end{align*}
 $$
 
+```{figure} figures/franke.svg
+:label: figure-1
+:alt: Franke function
+:align: center
+
+Plot of the Franke function on the domain $[0,1]\times[0,1]$.
+```
+
 ## Linear Regression
 
 Consider a statistical experiment with an input variable $\mathbf{x}\in X\subseteq \R^p$ of $p$ covariates producing a real response $y\in Y\subseteq \R$. Taking $n$ samples of the experiment produces a labeled training set
