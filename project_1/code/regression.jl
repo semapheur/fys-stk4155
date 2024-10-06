@@ -1,24 +1,25 @@
+using LinearAlgebra
 using Random
 using Statistics
 
 """
-Scale the data to have zero mean and unit variance.
+Transform the data to have zero mean and unit variance.
 
 # Parameters
-- `x::Matrix{Float64}`: The input data.
+- `data::Matrix{Float64}`: The input data.
 
 # Returns
-- `x_scaled::Matrix{Float64}`: The scaled data.
+- `data_scaled::Matrix{Float64}`: The scaled data.
 """
-function scale_data(x::Matrix{Float64})::Matrix{Float64}
-  means = mean(x, dims=1)
-  stds = std(x, dims=1)
-  x_scaled = (x .- means) ./ stds
-  return x_scaled
+function scale_data(data::Matrix{Float64})::Matrix{Float64}
+  means = mean(data, dims=1)
+  stds = std(data, dims=1)
+  data_scaled = (data .- means) ./ stds
+  return data_scaled
 end
 
 """
-Split the data into training and testing sets.
+Split the data into training and testing sets using random shuffling
 
 # Parameters
 - `x::Matrix{Float64}`: The input data.
@@ -31,7 +32,11 @@ Split the data into training and testing sets.
 - `y_train::Vector{Float64}`: The response variable for the training set.
 - `y_test::Vector{Float64}`: The response variable for the testing set.
 """
-function train_test_split(x::Matrix{Float64}, y::Vector{Float64}, train_ratio::Float64=0.8)
+function train_test_split(
+  x::Matrix{Float64},
+  y::Vector{Float64},
+  train_ratio::Float64=0.8,
+)::Tuple{Matrix{Float64},Matrix{Float64},Vector{Float64},Vector{Float64}}
   # Check that train_ratio is between 0.0 and 1.0
   if train_ratio < 0.0 || train_ratio > 1.0
     throw(ArgumentError("train_ratio must be between 0.0 and 1.0"))
@@ -54,6 +59,32 @@ function train_test_split(x::Matrix{Float64}, y::Vector{Float64}, train_ratio::F
   y_test = y[indices[train_size+1:end]]
 
   return x_train, x_test, y_train, y_test
+end
+
+"""
+Prepares the data for training a model.
+
+This function first scales the data to have zero mean and unit variance,
+then splits the data into training and testing sets.
+
+# Parameters
+- `x::Matrix{Float64}`: The input data.
+- `y::Vector{Float64}`: The response variable.
+- `train_ratio::Float64=0.8`: The proportion of the data to include in the training set. Defaults to 0.8.
+
+# Returns
+- `x_train::Matrix{Float64}`: The training set.
+- `x_test::Matrix{Float64}`: The testing set.
+- `y_train::Vector{Float64}`: The response variable for the training set.
+- `y_test::Vector{Float64}`: The response variable for the testing set.
+"""
+function prepare_train_test_data(
+  x::Matrix{Float64},
+  y::Vector{Float64},
+  train_ratio::Float64=0.8,
+)::Tuple{Matrix{Float64},Matrix{Float64},Vector{Float64},Vector{Float64}}
+  x_scaled = scale_data(x)
+  return train_test_split(x_scaled, y, train_ratio)
 end
 
 """
@@ -104,7 +135,7 @@ the singular value decomposition.
 function ordinary_least_squares(
   X::Matrix{Float64},
   y::Vector{Float64},
-  svd::Bool=false,
+  svd_solver::Bool=true,
 )::Vector{Float64}
 
   # Check that x and y have the same number of rows
@@ -112,13 +143,13 @@ function ordinary_least_squares(
     throw(DimensionMismatch("X and y must have the same number of rows"))
   end
 
-  if svd
+  if svd_solver
     # Compute coefficients using singular value decomposition
-    U, S, V = svd(X)
-    β = V * inv(Diagonal(S)) * U' * y
+    U, s, V = svd(X)
+    β = V * (s .\ (U' * y))
   else
-    # Compute coefficients using the normal equation
-    β = inv(X' * X) * X' * y
+    # Compute coefficients using the normal equation 
+    β = X \ y # backslash operator uses QR decomposition by default
   end
 
   return β
@@ -143,22 +174,20 @@ function ridge_regression(
   X::Matrix{Float64},
   y::Vector{Float64},
   λ::Float64,
-  svd::Bool=false,
-)::Vector{Float64}
-  n, m = size(x)
+  svd_solver::Bool=true,
+)#::Vector{Float64}
 
   # Check that x and y have the same number of rows
-  if n != length(y)
+  if size(X, 1) != length(y)
     throw(DimensionMismatch("X and y must have the same number of rows"))
   end
 
-  I = IMatrix(m)
-  if svd
-    U, S, V = svd(X)
-    R = U * S
-    β = V * inv(R' * R + λ * I) * (R' * y)
+  if svd_solver
+    U, s, V = svd(X)
+    d = s ./ (s .^ 2 .+ λ)
+    β = V * (d .* (U' * y))
   else
-    β = inv(X' * X + λ * I) * (X' * y)
+    β = inv(X' * X + λ * I) * X' * y
   end
 
   return β
@@ -187,7 +216,7 @@ function lasso_regression(
   max_iter::Int=1000,
   tol::Float64=1e-6,
 )::Vector{Float64}
-  n, m = size(x)
+  n, m = size(X) # n: number of samples, m: number of features
 
   # Check that x and y have the same number of rows
   if n != length(y)
@@ -200,8 +229,10 @@ function lasso_regression(
     β_old = copy(β)
 
     for j = 1:m
+      # Calculate the residual without the j-th feature
       residual = y - X * β + X[:, j] * β[j]
-      β[j] = soft_threshold(X[:, j]' * residual[j], λ) / (X[:, j]' * X[:, j])
+      # Update the j-th coefficient using soft thresholding
+      β[j] = soft_threshold(X[:, j]' * residual, λ) / (X[:, j]' * X[:, j])
     end
 
     # Check for convergence
@@ -237,10 +268,21 @@ end
 function franke_training_data(
   n::Int,
   noise_amplitude::Float64=0.1,
+  random_inputs::Bool=false,
 )::Tuple{Matrix{Float64},Vector{Float64}}
-  x_1 = range(0, 1, length=n)
-  x_2 = range(0, 1, length=n)
-  Y = franke.(x_1', x_2) .+ noise_amplitude * randn(n, n)
+  if random_inputs
+    x_1 = rand(n)
+    x_2 = rand(n)
+  else
+    x_1 = range(0, 1, length=n)
+    x_2 = range(0, 1, length=n)
+  end
+
+  Y = franke.(x_1', x_2)
+
+  if noise_amplitude != 0.0
+    Y .+= noise_amplitude * randn(n, n)
+  end
 
   y = vec(Y)
 
@@ -249,9 +291,7 @@ function franke_training_data(
   X_2 = repeat(x_2', n)
   X = hcat(X_1, vec(X_2))
 
-  X_scaled = scale_data(X)
-
-  return X_scaled, y
+  return X, y
 end
 
 """
@@ -335,4 +375,38 @@ function polynomial_design_matrix(data::Matrix{Float64}, degree::Int)::Matrix{Fl
   end
 
   return design_matrix
+end
+
+function create_markdown_table(variables::Int, degree::Int)::String
+  # Generate the combinations
+  combos = polynomial_combinations(variables, degree)
+
+  # Create header row
+  header = ["\$\\beta_{$(i)}\$" for i = 0:length(combos)-1]
+
+  # Create separator row
+  separator = ["---" for _ = 1:length(header)]
+
+  # Create rows for the combinations
+  rows = []
+  for combo in combos
+    row = [
+      "\$" *
+      join(["x_{$(i)}^{$(combo[i])}" for i = 1:variables if combo[i] > 0], " ") *
+      "\$",
+    ]
+    push!(rows, row)
+  end
+
+  # Convert rows to markdown format
+  markdown_table = "| " * join(header, " | ") * " |\n"
+  markdown_table *= "| " * join(separator, " | ") * " |\n"
+
+  for row in rows
+    markdown_table *= "| " * join(row, " | ") * " "
+  end
+
+  markdown_table *= "|"
+
+  return markdown_table
 end

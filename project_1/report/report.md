@@ -18,9 +18,10 @@ abstract: |
 
 # Introduction
 
-linear regression is used 
+This report examines various linear regression models for doing polynial fit of two-dimensional
+is used 
 
-OLS is prone to overfitting
+OLS is prone to overfitting and collinearity
 
 this can be mitigated with regularization penalizing large weights
 
@@ -30,15 +31,37 @@ Structure of the report
 
 # Method
 
-## The Franke Equation
+## Data Generation Using Franke's Function
+
+Franke's function was used to generate training data for the polynomial regression models. This is a two-dimensional scalar field $f:\R^2 \to\R$ given by a weighted sum of four exponentials:
 
 $$
 \label{equation-1}
-\begin{align*}
-  f(x,y) =& \frac{3}{4} \exp\left(-\frac{(9x - 2)^2}{4} - \frac{(9y - 2)^2}{4} \right) + \frac{3}{4}\exp\left(\frac{(9x + 1)^2}{49} - \frac{9y + 1}{10}\right) \\
-  &+ \frac{1}{2}\exp\left(-\frac{(9x - 7)^2}{4} - \frac{(9y - 3)^2}{4} \right) - \frac{1}{5}\exp\left(-(9x - 4)^2 - (9y - 7)^2 \right)
-\end{align*}
+\begin{split}
+  f(x,y) =& \frac{3}{4} \exp\left(-\frac{(9x - 2)^2}{4} - \frac{(9y - 2)^2}{4} \right) \\
+  &+ \frac{3}{4}\exp\left(\frac{(9x + 1)^2}{49} - \frac{9y + 1}{10}\right) \\
+  &+ \frac{1}{2}\exp\left(-\frac{(9x - 7)^2}{4} - \frac{(9y - 3)^2}{4} \right) \\
+  &- \frac{1}{5}\exp\left(-(9x - 4)^2 - (9y - 7)^2 \right)
+\end{split}
 $$
+
+A plot of the Franke function on the unit square $[0,1]^2$ is given in [](#figure-1). We used two approaches to generate training data sets using [](#equation-1). One approach was to apply the function for standard uniformly distributed input values. With $n$ input samples, this generates training data of the form
+
+$$
+  S = \Set{((x_i, y_i), f(x_i, y_i)) : x_i, y_i \sim \operatorname{Uniform}(0,1)}_{i=1}^n
+$$
+
+Here the standard uniform distribution is used to confine the input values to the unit square $[0,1]^2$. Another approach was to apply the function on linearly spaced input values on the unit square $[0,1]^2$. Additionally, we modified the Franke function by adding normal distributed noise:
+
+$$
+  \hat{f}(x, y) = f(x, y) + a\varepsilon,\; \varepsilon\sim\mathcal{N}(0,1),
+$$
+
+where $a\in\R$ is a scaling factor. For our experiments, a scaling factor of $a = 0.1$ was choose. Figure REFERENCE shows a plot of the Franke function with added noise. A Julia implementation of generating training data with a noisy Franke function is given in REFERENCE.
+
+The two given methods ensured that the input values were confined to the range $[0,1]$. Additionally, the input data was translated to have zero mean and scaled to have unit variance. This kind of data transformation is a standard procedure in machine learning to improve numerical stability and performance of optimization algorithms by enforcing the input features to have the same scale. A particular concern in polynomial regression is that higher-degree terms tend to amplify the input values. Scaling and centering the input data help ensure that all features contribute equally to the model. 
+
+As a final preprocessing step, we split the generated data into a training set applied on the regression models and a test set used for model validation. We used a train/test ratio of 0.8 throughout our experiments and applied random shuffling of the data before doing the split. This is especially important when using linearly spaced input variables to generate data with the Franke function. As seen from [](#figure-1), the Franke function creates distinct regions of elevations and depressions. Without shuffling we risk creating train and test sets that are consistenly different, which may result in a model that does not generalize well. 
 
 ```{figure} figures/franke.svg
 :label: figure-1
@@ -47,6 +70,12 @@ $$
 
 Plot of the Franke function on the domain $[0,1]\times[0,1]$.
 ```
+
+## Polynomial Regression
+
+In this study, we used ordinary least squares, ridge regression and LASSO regression to fit a polynomial to generated training data.
+
+
 
 ## Linear Regression
 
@@ -243,7 +272,7 @@ Equation this to $0$ and solving for $\hat{\beta}_j$ gives
 $$
   \hat{\beta}_j (\lambda_1) = \begin{cases}
     \hat{\beta_j} - \lambda/2, \quad& \hat{\beta}_j (\lambda) > 0 \\
-    0,\quad \hat{\beta}(\lambda) = 0
+    0,\quad& \hat{\beta}(\lambda) = 0 \\
     \hat{\beta_j} + \lambda/2, \quad& \hat{\beta}_j (\lambda) < 0
   \end{cases}
 $$
@@ -251,19 +280,126 @@ $$
 which can be wirtten more compactly as
 
 $$
-  \hat{\beta_j} = (\lambda_i) = \operatorname{sign}(\hat{\beta}_j) (|\hat{\beta}_j| - \frac{\lambda}{2})_+ =: \operatorname{SoftThreshold}(\hat{\beta}_j, \frac{\lambda}{2})
+  \hat{\beta_j} = (\lambda_i) = \operatorname{sign}(\hat{\beta}_j) \left(|\hat{\beta}_j| - \frac{\lambda}{2}\right)_+ =: \operatorname{SoftThreshold}\left(\hat{\beta}_j, \frac{\lambda}{2}\right)
 $$
 
 This shows that the LASSO regression estimation applies a threshold to the maximum likelihood estimation.
 
-While both ridge and LASSO regression achieves shrinkage of the regression coefficients, LASSO regression also achieves selection of regression coeffiecients. This effect follows from the fact that the $\ell_1$-norm penalty creates a diamond-like constraint surface with its cornes falling on the coordinate axes [@vanwieringen2023lecturenotesridgeregression, pp. 109-111].
+While both ridge and LASSO regression achieves shrinkage of the regression coefficients, LASSO regression also achieves selection of regression coeffiecients. This effect follows from the fact that the $\ell_1$-norm penalty creates a diamond-like constraint surface with its corners aligned with the coordinate axes [@vanwieringen2023lecturenotesridgeregression, pp. 109-111].
 
 As outlined in @vanwieringen2023lecturenotesridgeregression [pp. 112-117], there are several numerical methods for evaluating LASSO regression estimator. This report is based on the coordinate descent method, which minimizes the LASSO log-likelihood function along the coordinates one at a time.
 
 # Results
 
-# Discussion
+## Polynomial Regression of the Franke Function
+
+This section presents the result from running ordinary least squares regression of the Franke function. The training data were generated by calculating the Franke function on linearly spaced input vectors in the domain $[0,1]\times[0,1]$ and then adding normal distributed noise scaled by $0.1$.
+
+### Ordinary Least Squares
+
+Polynomial regression using ordinary least squares was performed in experiments with datasets of $100$ and $10,000$ samples (prior to 4/5 train/test split), respectively, generated by a noisy Franke function. The results from these experiments are shown in [](#figure-3). In the $100$-sample case, we observed significant fluctuations in the mean squared error (MSE) and $R^2$ scores for polynomial models of degree $7$ and higher, indicating instability in model performance. This case was run in $1,000$ simulations to gain a clearer understanding of the trends associated with higher-order polynomial models, particularly when the dataset size is comparable to the number of regression coefficients.
+
+Overall, the results indicate that polynomial models generally improve with increasing degree, which aligns with the expectation that a higher polynomial degree introduces greater complexity to the model. However, this increased complexity can also lead to overfitting, particularly in smaller datasets. This appears to be the case when the number of regression coefficients become comparable the sample size. A $7$-degree bivariate polynomial has $\binom{9}{7} = 36$ regression coefficients which is nearly half of the $80$ training points in the $100$-sample case.
+
+Notably, polynomial models of degree $7$ and higher occasionally yielded negative $R^2$ scores in the $100$-sample case, suggesting significant overfitting. A negative $R^2$ indicates that the model performs worse than a simple mean of the observed data, implying that the complexity of these higher-degree models captures noise rather than the underlying trend. This phenomenon underscores the risk of overfitting in polynomial regression, particularly when the model complexity exceeds the information available in the data.
+
+[](#figure-4) illustrates the regression coefficients obtained from polynomial ordinary least squares regression for degrees up to five. Notably, the coefficients exhibit similar values across the various degrees, indicating a degree of stability in the model's parameter estimates as the polynomial complexity increases.
+
+Interestingly, the fourth and fifth-degree polynomials display identical values for the coefficients $\beta_i$​ where $i=10,\dots,14$. This suggests that the addition of higher-order terms beyond degree four does not contribute significantly to the model, reinforcing the idea of potential overfitting when utilizing more complex models.
+
+Among the coefficients, $\beta_2$ corresponding to $x_2$,​ stands out with a notably strong negative value. This indicates a significant inverse relationship between the corresponding predictor variable and the response variable, which may play a crucial role in the overall behavior of the model.
+
+```{figure} figures/ols_franke_mse_r2.svg
+:label: figure-3
+:alt: MSE and R^2 for polynomial OLS regression of the Franke function
+:align: center
+
+Mean squared error and $R^2$ scores for polynomial ordinary least squares regression on data generated by a noisy Franke function. The top row presents results from $100$ samples, averaged over $1,000$ simulations, while the bottom row shows results from $10,000$ samples, based on a single simulation. Note that outliers have been omitted from the box plots in the top row.
+```
+
+```{figure} figures/ols_franke_coefficients.svg
+:label: figure-4
+:alt: Polynomial OLS regression coefficients for the Franke function
+:align: center
+
+Regression coefficients from polynomial ordinary least squares regression applied to $10,000$ samples generated by a noisy Franke function. The vertical lines indicate the number of coefficients corresponding to each polynomial degree.
+```
+
+### Ridge Regression
+
+[](#figure-5) presents the mean squared error and $R^2$ scores for polynomial ridge regression applied to data generated by a noisy Franke function, evaluated across a range of regularization parameters $\lambda$. Notably, when $\lambda$ is below $1,000$, the performance metrics closely resemble those observed in ordinary least squares regression, indicating minimal regularization effects. However, as $\lambda$ exceeds $100,000$, the performance of higher-degree polynomial models deteriorates, suggesting that excessive regularization may hinder their ability to capture the underlying data structure. This trend underscores the importance of selecting an appropriate regularization parameter to balance bias and variance in polynomial ridge regression.
+
+[](#figure-4) displays the regression coefficients derived from polynomial ridge regression with a regularization parameter $λ=1,000$ for polynomial degrees up to five. Notably, the coefficients are an order of magnitude lower than those obtained from ordinary least squares (OLS) regression. This significant reduction highlights the impact of regularization in constraining coefficient values. Furthermore, the ridge regression coefficients exhibit more extreme values compared to the OLS coefficients, which predominantly cluster around zero with only a few exhibiting large magnitudes. This shift in the distribution of coefficients underscores the role of regularization in managing complexity and controlling overfitting.
+
+```{figure} figures/ridge_franke_mse_r2.svg
+:label: figure-5
+:alt: MSE and R^2 for polynomial ridge regression of the Franke function
+:align: center
+
+Mean squared error and $R^2$ scores for polynomial ridge regression on data generated by a noisy Franke function using $10,000$ samples. The results illustrate the performance across various regularization parameters $\lambda$.
+```
+
+```{figure} figures/ridge_franke_coefficients.svg
+:label: figure-5
+:alt: Polynomial ridge regression coefficients for the Franke function
+:align: center
+
+Regression coefficients from polynomial ridge regression with a regularization parameter $\lambda=1,000$ applied to $10,000$ samples generated by a noisy Franke function. The vertical lines indicate the number of coefficients corresponding to each polynomial degree.
+```
+
+### LASSO Regression
+
+[](#figure-6) presents the mean squared error and $R^2$ scores for polynomial LASSO regression applied to data generated by a noisy Franke function, evaluated across a range of regularization parameters $\lambda$. Similar to the behavior observed in ridge regression, when $\lambda$ is below $100$, the performance metrics closely resemble those observed in ordinary least squares regression, indicating minimal regularization effects. When $\lambda$ ranges between $500$ and $1000$, lower-degree polynomial models shows improved performance relative to their higher-degree counterparts, indicating a beneficial effect of regularization in these cases. However, once $\lambda$ exceeds $2000$, model performance begins to decline significantly, indicating over-regularization.
+
+[](#figure-7) displays the regression coefficients derived from polynomial LASSO regression with a regularization parameter $λ=750$ for polynomial degrees up to five. Notably, only a few coefficients exhibit significant values, with the majority remaining near or equal to zero. This sparsity in the coefficient values reflects the effectiveness of LASSO in feature selection, effectively reducing the complexity of the model by retaining only the most influential terms while minimizing the impact of less significant ones.
+
+```{figure} figures/lasso_franke_mse_r2.svg
+:label: figure-6
+:alt: MSE and R^2 for polynomial LASSO regression of the Franke function
+:align: center
+
+Mean squared error and $R^2$ scores for polynomial LASSO regression on data generated by a noisy Franke function using $10,000$ samples. The results illustrate the performance across various regularization parameters $\lambda$.
+```
+
+```{figure} figures/lasso_franke_coefficients.svg
+:label: figure-7
+:alt: Polynomial LASSO regression coefficients for the Franke function
+:align: center
+
+Regression coefficients from polynomial LASSO regression with a regularization parameter $\lambda=750$ applied to $10,000$ samples generated by a noisy Franke function. The vertical lines indicate the number of coefficients corresponding to each polynomial degree.
+```
 
 # Conclusion
 
 # Appendix
+
+## 5th Degree Polynomial Regression Coefficients
+
+:::{table} Regression coefficients ($β$) and their corresponding monomials for a polynomial of degree five. Each coefficient represents the weight assigned to the respective monomial term in the polynomial regression model, capturing the influence of different variable interactions on the response variable.
+:label: table-1
+:align: center
+
+| Coefficient | Monomial |
+| :---: | :---: |
+| $\beta_0$ | $1$ |
+| $\beta_1$ | $x_2^1$ |
+| $\beta_2$ | $x_1^1$ |
+| $\beta_3$ | $x_2^2$ |
+| $\beta_4$ | $x_1^1 x_2^1$ |
+| $\beta_5$ | $x_1^2$ |
+| $\beta_6$ | $x_2^3$ |
+| $\beta_7$ | $x_1^1 x_2^2$ |
+| $\beta_8$ | $x_1^2 x_2^1$ |
+| $\beta_9$ | $x_1^3$ |
+| $\beta_{10}$ | $x_2^4$ |
+| $\beta_{11}$ | $x_1^1 x_2^3$ |
+| $\beta_{12}$ | $x_1^2 x_2^2$ |
+| $\beta_{13}$ | $x_1^3 x_2^1$ |
+| $\beta_{14}$ | $x_1^4$ |
+| $\beta_{15}$ | $x_2^5$ |
+| $\beta_{16}$ | $x_1^1 x_2^4$ |
+| $\beta_{17}$ | $x_1^2 x_2^3$ |
+| $\beta_{18}$ | $x_1^3 x_2^2$ |
+| $\beta_{19}$ | $x_1^4 x_2^1$ |
+| $\beta_{20}$ | $x_1^5$ |
+:::
