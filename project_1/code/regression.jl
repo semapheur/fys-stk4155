@@ -11,11 +11,11 @@ Transform the data to have zero mean and unit variance.
 # Returns
 - `data_scaled::Matrix{Float64}`: The scaled data.
 """
-function scale_data(data::Matrix{Float64})::Matrix{Float64}
+function standardize_data(data::Matrix{Float64})::Matrix{Float64}
   means = mean(data, dims=1)
   stds = std(data, dims=1)
-  data_scaled = (data .- means) ./ stds
-  return data_scaled
+  data_standardized = (data .- means) ./ stds
+  return data_standardized
 end
 
 """
@@ -62,29 +62,39 @@ function train_test_split(
 end
 
 """
-Prepares the data for training a model.
-
-This function first scales the data to have zero mean and unit variance,
-then splits the data into training and testing sets.
+Split the data into k folds for cross-validation.
 
 # Parameters
-- `x::Matrix{Float64}`: The input data.
-- `y::Vector{Float64}`: The response variable.
-- `train_ratio::Float64=0.8`: The proportion of the data to include in the training set. Defaults to 0.8.
+- `n::Int`: The number of samples.
+- `k::Int`: The number of folds.
 
 # Returns
-- `x_train::Matrix{Float64}`: The training set.
-- `x_test::Matrix{Float64}`: The testing set.
-- `y_train::Vector{Float64}`: The response variable for the training set.
-- `y_test::Vector{Float64}`: The response variable for the testing set.
+- `folds::Vector{Vector{Int}}`: The folds, each as a vector of indices.
 """
-function prepare_train_test_data(
-  x::Matrix{Float64},
-  y::Vector{Float64},
-  train_ratio::Float64=0.8,
-)::Tuple{Matrix{Float64},Matrix{Float64},Vector{Float64},Vector{Float64}}
-  x_scaled = scale_data(x)
-  return train_test_split(x_scaled, y, train_ratio)
+function kfold_split(n::Int, k::Int)
+  # Ensure k is not larger than n
+  k = min(k, n)
+
+  # Create random permutation of indices
+  indices = randperm(n)
+
+  # Calculate fold sizes
+  fold_sizes = fill(n ÷ k, k)
+  remainder = n % k
+  for i = 1:remainder
+    fold_sizes[i] += 1
+  end
+
+  # Create folds
+  folds = Vector{Vector{Int}}(undef, k)
+  start_idx = 1
+  for i = 1:k
+    end_idx = start_idx + fold_sizes[i] - 1
+    folds[i] = indices[start_idx:end_idx]
+    start_idx = end_idx + 1
+  end
+
+  return folds
 end
 
 """
@@ -127,7 +137,7 @@ the singular value decomposition.
 # Parameters
 - `X::Matrix{Float64}`: The design matrix.
 - `y::Vector{Float64}`: The response variable.
-- `svd::Bool=false`: Whether to use the singular value decomposition. Defaults to false.
+- `svd::Bool`: Whether to use the singular value decomposition.
 
 # Returns
 - `β::Vector{Float64}`: The estimated regression coefficients.
@@ -165,7 +175,7 @@ singular value decomposition.
 - `X::Matrix{Float64}`: The design matrix.
 - `y::Vector{Float64}`: The response variable.
 - `λ::Float64`: The regularization parameter.
-- `svd::Bool=false`: Whether to use the singular value decomposition. Defaults to false.
+- `svd::Bool`: Whether to use the singular value decomposition.
 
 # Returns
 - `β::Vector{Float64}`: The estimated coefficients.
@@ -375,38 +385,4 @@ function polynomial_design_matrix(data::Matrix{Float64}, degree::Int)::Matrix{Fl
   end
 
   return design_matrix
-end
-
-function create_markdown_table(variables::Int, degree::Int)::String
-  # Generate the combinations
-  combos = polynomial_combinations(variables, degree)
-
-  # Create header row
-  header = ["\$\\beta_{$(i)}\$" for i = 0:length(combos)-1]
-
-  # Create separator row
-  separator = ["---" for _ = 1:length(header)]
-
-  # Create rows for the combinations
-  rows = []
-  for combo in combos
-    row = [
-      "\$" *
-      join(["x_{$(i)}^{$(combo[i])}" for i = 1:variables if combo[i] > 0], " ") *
-      "\$",
-    ]
-    push!(rows, row)
-  end
-
-  # Convert rows to markdown format
-  markdown_table = "| " * join(header, " | ") * " |\n"
-  markdown_table *= "| " * join(separator, " | ") * " |\n"
-
-  for row in rows
-    markdown_table *= "| " * join(row, " | ") * " "
-  end
-
-  markdown_table *= "|"
-
-  return markdown_table
 end

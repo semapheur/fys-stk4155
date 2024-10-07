@@ -29,53 +29,9 @@ ridge regression (L_2 regularization) and LASSO regression (L_1 regularization)
 
 Structure of the report
 
-# Method
+# Theory and Method
 
-## Data Generation Using Franke's Function
-
-Franke's function was used to generate training data for the polynomial regression models. This is a two-dimensional scalar field $f:\R^2 \to\R$ given by a weighted sum of four exponentials:
-
-$$
-\label{equation-1}
-\begin{split}
-  f(x,y) =& \frac{3}{4} \exp\left(-\frac{(9x - 2)^2}{4} - \frac{(9y - 2)^2}{4} \right) \\
-  &+ \frac{3}{4}\exp\left(\frac{(9x + 1)^2}{49} - \frac{9y + 1}{10}\right) \\
-  &+ \frac{1}{2}\exp\left(-\frac{(9x - 7)^2}{4} - \frac{(9y - 3)^2}{4} \right) \\
-  &- \frac{1}{5}\exp\left(-(9x - 4)^2 - (9y - 7)^2 \right)
-\end{split}
-$$
-
-A plot of the Franke function on the unit square $[0,1]^2$ is given in [](#figure-1). We used two approaches to generate training data sets using [](#equation-1). One approach was to apply the function for standard uniformly distributed input values. With $n$ input samples, this generates training data of the form
-
-$$
-  S = \Set{((x_i, y_i), f(x_i, y_i)) : x_i, y_i \sim \operatorname{Uniform}(0,1)}_{i=1}^n
-$$
-
-Here the standard uniform distribution is used to confine the input values to the unit square $[0,1]^2$. Another approach was to apply the function on linearly spaced input values on the unit square $[0,1]^2$. Additionally, we modified the Franke function by adding normal distributed noise:
-
-$$
-  \hat{f}(x, y) = f(x, y) + a\varepsilon,\; \varepsilon\sim\mathcal{N}(0,1),
-$$
-
-where $a\in\R$ is a scaling factor. For our experiments, a scaling factor of $a = 0.1$ was choose. Figure REFERENCE shows a plot of the Franke function with added noise. A Julia implementation of generating training data with a noisy Franke function is given in REFERENCE.
-
-The two given methods ensured that the input values were confined to the range $[0,1]$. Additionally, the input data was translated to have zero mean and scaled to have unit variance. This kind of data transformation is a standard procedure in machine learning to improve numerical stability and performance of optimization algorithms by enforcing the input features to have the same scale. A particular concern in polynomial regression is that higher-degree terms tend to amplify the input values. Scaling and centering the input data help ensure that all features contribute equally to the model. 
-
-As a final preprocessing step, we split the generated data into a training set applied on the regression models and a test set used for model validation. We used a train/test ratio of 0.8 throughout our experiments and applied random shuffling of the data before doing the split. This is especially important when using linearly spaced input variables to generate data with the Franke function. As seen from [](#figure-1), the Franke function creates distinct regions of elevations and depressions. Without shuffling we risk creating train and test sets that are consistenly different, which may result in a model that does not generalize well. 
-
-```{figure} figures/franke.svg
-:label: figure-1
-:alt: Franke function
-:align: center
-
-Plot of the Franke function on the domain $[0,1]\times[0,1]$.
-```
-
-## Polynomial Regression
-
-In this study, we used ordinary least squares, ridge regression and LASSO regression to fit a polynomial to generated training data.
-
-
+The following theoretical overview of linear regression is based on @murphy2022probabilisticmachinelearning, hastie2009elementsofstatisticallearning, and @vanwieringen2023lecturenotesridgeregression.
 
 ## Linear Regression
 
@@ -88,8 +44,8 @@ $$
 The aim of regression analysis is predict future responses using some function $f: X\to\R$ such that $f(\mathbf{x}_i) \approx y_i$ for each $i = 1,\dots,n$  by solving an optimization algorithm applied on the training set $S$. Linear regression assumes a linear relationship between $X$ and $Y$ that is subject to Gaussian noise. This linearity is modeled through an error variable $\epsilon\sim\mathcal{N}(0,\sigma^2)$ having zero-mean Gaussian distribution with variance $\sigma^2$. For each sample $i=1,\dots,n$, the model takes the form
 
 $$
-\label{equation-2}
-\mathbf{y}_i = \beta_0 + \left(\sum_{j=1}^p \mathbf{x}_{ij} \beta_j \right) + \epsilon_i = \beta_0 + \mathbf{x}_i^\top \boldsymbol{\beta} + \epsilon_i
+  \label{equation-1}
+  \mathbf{y}_i = \beta_0 + \left(\sum_{j=1}^p \mathbf{x}_{ij} \beta_j \right) + \epsilon_i = \beta_0 + \mathbf{x}_i^\top \boldsymbol{\beta} + \epsilon_i
 $$
 
 where $\boldsymbol{\beta} = \left[\begin{smallmatrix} \beta_1 & \dots & \beta_p \end{smallmatrix}\right]^\top$ is the *regression parameter*. Each regression coefficient $\beta_j$ measures the effect of a unit change in covariate vector $x_{ij}$, while keeping all other covariates fixed. In machine learning lingo, $\boldsymbol{\beta}$ represents the weights of the feature inputs. The intercept term $\beta_0$ represents a *bias* of the model, and specifies the response for $\mathbf{x}$. Furthermore, each $\epsilon_i$ is assumed to be independent, i.e. $\operatorname{cov}(\epsilon_i, \epsilon_j) = 0$ for $i\neq j$.
@@ -97,8 +53,8 @@ where $\boldsymbol{\beta} = \left[\begin{smallmatrix} \beta_1 & \dots & \beta_p 
 The linear regression model can be written more compactly in the matrix form
 
 $$
-\label{equation-3}
-\mathbf{y} = \mathbf{X}\boldsymbol{\beta}' + \boldsymbol{\epsilon}
+  \label{equation-2}
+  \mathbf{y} = \mathbf{X}\boldsymbol{\beta}' + \boldsymbol{\epsilon}
 $$
 
 where $\boldsymbol{\beta}' = \left[\begin{smallmatrix} \beta_0 & \boldsymbol{\beta} \end{smallmatrix}\right]^\top \in \R^{p+1}$, $\boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}_p, \sigma^2 \mathbf{I}_n)$ and
@@ -111,7 +67,7 @@ $$
   \end{bmatrix}
 $$
 
-The $n\times(p+1)$-matrix $\mathbf{X}$ is usually called the *design matrix*. Equation [](#equation-3) shows that the model is linear in $\boldsymbol{\beta}$. This means that the design matrix $\mathbb{X}$ can be fitted to $\mathbf{y}$ using non-linear functions $f$, such as polynomials.
+The $n\times(p+1)$-matrix $\mathbf{X}$ is called the *design matrix*. Equation [](#equation-2) shows that the model is linear in $\boldsymbol{\beta}$. This means that the design matrix $\mathbb{X}$ can be fitted to $\mathbf{y}$ using non-linear functions $f$, such as polynomials.
 
 The dependence on the Gaussian noise term $\boldsymbol{\epsilon}$ implies that $\mathbf{y}$ is a random variable with Gaussian distribution. The expected value of $y_i$ is given by
 
@@ -136,55 +92,68 @@ $$
 This shows that $y_i \sim\mathcal{N}(\mathbf{X}_{i,*}\boldsymbol{\beta}, \sigma^2)$ has a Gaussian distribution with mean $\mathbf{X}_{i,*}\boldsymbol{\beta}$ and variance $\sigma^2$. The probability density function (PDF) for $y_i$ is given by
 
 $$
-\label{equation-4}
-g(y_i|\mathbf{X}\boldsymbol{\beta}, \sigma^2) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp[-\frac{(y_i - \mathbf{X}_{i,*} \boldsymbol{\beta})^2}{2\sigma^2}]
+  \label{equation-3}
+  g(y_i|\mathbf{X}\boldsymbol{\beta}, \sigma^2) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp[-\frac{(y_i - \mathbf{X}_{i,*} \boldsymbol{\beta})^2}{2\sigma^2}]
 $$
 
 ## Ordinary Least Squares (OLS)
 
-maximum likelihood estimation of $\boldsymbol{\beta}$
-
-From the PDF [](#equation-4) we get the likelihood function
+The regression parameter $\boldsymbol{\beta}$ can be estimated using maximum likelihood estimation (MLE). Assuming that $y_i \sim\mathcal{N}(\mathbf{X}_{i,*}\boldsymbol{\beta}, \sigma^2)$ are independent and identically distributed, we can define the likelihood function
 
 $$
 \label{equation-5}
   L(\boldsymbol{\beta}, \sigma^2) = \prod_{i=1}^n g(y_i|\mathbf{X}\boldsymbol{\beta}, \sigma^2) = \frac{1}{\sqrt{2\pi\sigma^2}} \prod_{i=1}^n \exp\left(-\frac{1}{2\sigma^2}(y_i - \mathbf{X}_{i,*} \boldsymbol{\beta})^2\right)
 $$
 
-Since the natural logarithm is strictlity monotonic, finding the MLE of $L(\boldsymbol{\beta})$ is equivalent to minimizing the negative log-likelihood function
+taking the natural logarithm gives the log-likelihood function
+
+$$
+\label{equation-4}
+\begin{split}
+  \ln[L(\boldsymbol{\beta}, \sigma^2)] = \sum_{i=1}^n \left(\frac{1}{\sqrt{2\pi}\sigma} \exp\left[-\frac{1}{2\sigma^2} (y_i - \mathbf{X}_{i,*} \boldsymbol{\beta})^2 \right]\right) \\ 
+  =& -n \ln(\sqrt{2\pi}\sigma) - \frac{1}{2\sigma^2} \sum_{i=1}^n (y_i - \mathbf{X}_{i,*} \boldsymbol{\beta})^2 = -n \ln(\sqrt{2\pi}\sigma) - \frac{1}{2\sigma^2} \lVert \mathbf{y} - \mathbf{X}\boldsymbol{\beta} \rVert_2^2, 
+\end{split}
+$$
+
+where $\lVert \mathbf{x} \rVert_2 = \left(\sum_{i=1}^n x_i^2 \right)^{1/2} = \sqrt{\mathbf{x}^\top \mathbf{x}}$ is the $\ell_2$-norm. The term $\lVert \mathbf{y} - \mathbf{X}\boldsymbol{\beta} \rVert_2^2$ is known as the residual sum of squares.
+
+To find the MLE of $\boldsymbol{\beta}$, we need to solve the maximization problem
+
+$$
+  \hat{\boldsymbol{\beta}} = \argmax_{\boldsymbol{\beta}} L(\boldsymbol{\beta}, \sigma^2) \iff \hat{\boldsymbol{\beta}} = \argmax_{\boldsymbol{\beta}} ln[L(\boldsymbol{\beta}, \sigma^2)],
+$$
+
+where the equivalence of follows from the strict monotonicity of the natural logarithm. Since only the residual sum of squares term of [](#equation-5) depends on $\boldsymbol{\beta}$, this is equivalent to minimizing the cost function
+
+$$
+  \label{equation-6}
+  C(\boldsymbol{\beta}) = \frac{1}{n} \lVert \mathbf{y} - \mathbf{X}\boldsymbol{\beta} \rVert_2^2
+$$
+
+The gradient of [](#equation-6) with respect to $\boldsymbol{\beta}$ is
 
 $$
 \begin{align*}
-  \ell(\boldsymbol{\beta}, \sigma^2) =& \ln[L(\boldsymbol{\beta}, \sigma^2)] = \sum_{i=1}^n \left(\frac{1}{\sqrt{2\pi}\sigma} \exp\left[-\frac{1}{2\sigma^2} (y_i - \mathbf{X}_{i,*} \boldsymbol{\beta})^2 \right]\right) \\ 
-  =& -n \ln(\sqrt{2\pi}\sigma) - \frac{1}{2\sigma^2} \sum_{i=1}^n (y_i - \mathbf{X}_{i,*} \boldsymbol{\beta})^2 = -n \ln(\sqrt{2\pi}\sigma) - \frac{1}{2\sigma^2} \lVert \mathbf{y} - \mathbf{X}\boldsymbol{\beta} \rVert_2^2
+  \nabla_{\boldsymbol{\beta}} C(\boldsymbol{\beta}) =& \frac{1}{n} \nabla_{\boldsymbol{\beta}} (\mathbf{y} - \mathbf{X}\boldsymbol{\beta})^\top (\mathbf{y} - \mathbf{X}\boldsymbol{\beta}) \\
+  =& \frac{1}{n} \nabla_{\boldsymbol{\beta}} (\mathbf{y}^\top \mathbf{y} - 2\mathbf{y}^\top \mathbf{X}\boldsymbol{\beta} + \boldsymbol{\beta}^\top \mathbf{X}^\top \mathbf{X}\boldsymbol{\beta}) \\
+  =& \frac{1}{n}(\mathbf{0} - 2\mathbf{X}^\top \mathbf{y} + 2\mathbf{X}^\top \mathbf{X}\boldsymbol{\beta}) \\
+  =& \frac{2}{n} \mathbf{X}^\top (\mathbf{X}\boldsymbol{\beta} - \mathbf{y})
 \end{align*}
 $$
 
-Where $\lVert \mathbf{x} \rVert_2 = \left(\sum_{i=1}^n x_i^2 \right)^{1/2} = \sqrt{\mathbf{x}^\top \mathbf{x}}$ is the $\ell_2$ norm.
-
-To find the MLE of $\boldsymbol{\beta}$, we need to solve $\nabla_{\boldsymbol{\beta}} \ell(\boldsymbol{\beta}, \sigma^2) = \mathbf{0}$. Taking the gradient with respect to $\boldsymbol{\beta}$ gives
-
-$$
-\begin{align*}
-  \nabla_{\boldsymbol{\beta}} \ell(\boldsymbol{\beta}, \sigma^2) =& \nabla_{\boldsymbol{\beta}} \left(-n \ln(\sqrt{2\pi}\sigma) - \frac{1}{2\sigma^2} \lVert \mathbf{y} - \mathbf{X}\boldsymbol{\beta} \rVert_2^2 \right) = -\frac{1}{2\sigma^2} \nabla_{\boldsymbol{\beta}} (\mathbf{y} - \mathbf{X}\boldsymbol{\beta})^\top (\mathbf{y} - \mathbf{X}\boldsymbol{\beta}) \\
-  =& -\frac{1}{2\sigma^2} \nabla_{\boldsymbol{\beta}} (\mathbf{y}^\top \mathbf{y} - 2\mathbf{y}^\top \mathbf{X}\boldsymbol{\beta} + \boldsymbol{\beta}^\top \mathbf{X}^\top \mathbf{X}\boldsymbol{\beta}) = -\frac{1}{2\sigma^2}(\mathbf{0} - 2\mathbf{X}^\top \mathbf{y} + 2\mathbf{X}^\top \mathbf{X}\boldsymbol{\beta}) \\
-  =& \frac{1}{\sigma^2} \mathbf{X}^\top (\mathbf{y} - \mathbf{X}\boldsymbol{\beta})
-\end{align*}
-$$
-
-Equating the gradient to $\mathbf{0}_n$ gives the normal equation
+Solving for $\nabla_{\boldsymbol{\beta}} = \mathbf{0}$ gives the normal equation
 
 $$
   \mathbf{X}^\top \mathbf{X}\boldsymbol{\beta} = \mathbf{X}^\top \mathbf{y}
 $$
 
-Solving for $\boldsymbol{\beta}$ gives the maximum likehood estimate
+which in turn gives the MLE
 
 $$
   \hat{\boldsymbol{\beta}} = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y} = \mathbf{X}^+ \mathbb{y},
 $$
 
-where $\mathbf{X}^+ = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top$ is the Moore-Penrose inverse or pseudoinverse of $\mathbf{X}$. This particular, pseudoinverse is a left inverse, i.e. $\mathbf{X}^+ \mathbf{X} = \mathbf{I}_n$
+where $\mathbf{X}^+ = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top$ is the Moore-Penrose inverse or pseudoinverse of $\mathbf{X}$. This particular pseudoinverse is a left inverse, i.e. $\mathbf{X}^+ \mathbf{X} = \mathbf{I}_n$
 
 The expected value of $\hat{\boldsymbol{\beta}}$ is given by
 
@@ -206,43 +175,88 @@ $$
 \end{align*}
 $$
 
-There are two main problems with maximum likelhood estimation using ordinary least squares: collinearity and overfitting. Collinearity occurs when two or more covariates are strongly linearly correlated. This makes it hard to discern the effect of collinear covariates because their impact may be intertwined. Overfitting occurs when the regression model fits to the observed noise rather than the underlying pattern. This may result in a model that generalizes poorly to novel data. 
+There are two main problems with maximum likelhood estimation using ordinary least squares: collinearity and overfitting. Collinearity occurs when two or more covariates are strongly linearly correlated. This makes it hard to discern the effect of collinear covariates because their impact may be intertwined. Overfitting occurs when the regression model fits to the observed noise rather than the underlying pattern. This may result in a model that generalizes poorly to novel data.
+
+```{figure} figures/ols_geometrt.pdf
+:label: figure-ols
+:alt: Geometric interpretation of OLS estimator.
+:align: center
+
+Geometric intepretation of the ordinary least squares estimator.
+```
 
 The problem of collinearlity and overfitting can be mitigated with several techniques, of which regularization and cross-validation are examined in this report. Regularization involves adding a constraint to the likelihood function that penalizes large norms of the regression parameter. The two regularization methods examined in this report are ridge regression and LASSO regression, where LASSO stands for "least shrinkage and selection operator". Ridge regression adds a penalty based on the square $\ell_2$-norm of the regression coefficients and is therefore also called $\ell_2$ regularization. LASSO regression, on the other hand, adds a penalty based on the $\ell_1$-norm of the coefficients and is also called $\ell_1$ regularization.
 
 ## Ridge Regression ($\ell_2$ Regularization)
 
-Ridge regression adds a regularization to the likelihood function [](#equation-5) with a penalty to the square $\ell_2$-norm of the regression coefficients:
+Ridge regression adds a regularization to the likelihood function [](#equation-6) with a penalty to the square $\ell_2$-norm of the regression coefficients:
 
 $$
-  \ell_{\text{ridge}} (\boldsymbol{\beta}; \lambda) = \lVert\mathbf{y} - \mathbf{X}\boldsymbol{\beta}\rVert_2^2 + \lambda\lVert\boldsymbol{\beta}\rVert = \sum_{i=1}^n (y_i - \mathbf{X}_{i,*}\boldsymbol{\beta})^2 + \lambda \sum_{j=1}^p \beta_j^2
+\label{equation-7}
+  C_{\text{ridge}} (\boldsymbol{\beta}, \lambda) = \frac{1}{n}\lVert\mathbf{y} - \mathbf{X}\boldsymbol{\beta}\rVert_2^2 + \lambda\lVert\boldsymbol{\beta}\rVert = \sum_{i=1}^n (y_i - \mathbf{X}_{i,*}\boldsymbol{\beta})^2 + \lambda \sum_{j=1}^p \beta_j^2
 $$
 
-The penalty term, $\lambda\lVert\boldsymbol{\beta}\rVert_2^2$ is called the *ridge penalty* and $\lambda\in[0,\infty)$ is called the *regularization term*. When $\lambda = 0$, the ridge log-likelihood function reduces to [](#equation-5).
+The penalty term, $\lambda\lVert\boldsymbol{\beta}\rVert_2^2$ is called the *ridge penalty* and $\lambda\in[0,\infty)$ is called the *regularization term*. When $\lambda = 0$, the ridge cost function reduces to [](#equation-6).
 
-To find the ridge estimator of $\boldsymbol{\beta}$, we need to solve $\nabla_{\boldsymbol{\beta}} \ell_{\text{ridge}} (\boldsymbol{\beta}, \sigma^2) = \mathbf{0}$. Taking the gradient with respect to $\boldsymbol{\beta}$ gives
+To find the ridge estimator of $\boldsymbol{\beta}$, we need to solve $\nabla_{\boldsymbol{\beta}} C_{\text{ridge}} (\boldsymbol{\beta}, \lambda) = \mathbf{0}$. Ignoring the $1/n$ scalar, the gradient of [](#equation-7) with respect to $\boldsymbol{\beta}$ is
+
+$$
+\begin{split}
+  \nabla_{\boldsymbol{\beta}} C_{\text{ridge}} (\boldsymbol{\beta}, \lambda) =& \nabla_{\boldsymbol{\beta}} \left(\lVert \mathbf{y} - \mathbf{X}\boldsymbol{\beta}\rVert_2^2 + \lambda\lVert\boldsymbol{\beta}\rVert_2^2 \right) \\
+  =& 2\mathbf{X}^\top (\mathbf{y} - \mathbf{X}\boldsymbol{\beta}) + 2\lambda \mathbf{I}_p \boldsymbol{\beta} = 2(\mathbf{X}^\top \mathbf{X} + \lambda\mathbf{I}_p)\boldsymbol{\beta} - 2\mathbf{X}^\top \mathbf{y}
+\end{split}
+$$
+
+Solving $\nabla_{\boldsymbol{\beta}} C_{\text{ridge}} = \mathbf{0}$ gives the ridge estimator
+
+$$
+  \hat{\boldsymbol{\beta}}(\lambda) = (\mathbf{X}^\top \mathbf{X} + \lambda\mathbf{I}_p)^{-1} \mathbf{X}^\top \mathbf{y}
+$$
+
+Applying a singular value decomposition (SVD) $\mathbf{X} = \mathbf{USV}^\top$, where
+- $\mathbf{V}^\top \mathbf{V} = \mathbf{VV}^\top = \mathbf{I}_p$
+- $\mathbf{UU}^\top \mathbf{U} = \mathbf{UU}^\top = \mathbf{I}_n$
+- $\mathbf{S} = \operatorname{diag}(s_{ii})_{i=1}^{\min(n,p)}$ is a diagonal $n\times p$ matrix with singular values on the main diagonal,
+the ridge estimator takes the form [@vanwieringen2023lecturenotesridgeregression, p. 9]
+
+$$
+\label{equation-8}
+  \hat{\boldsymbol{\beta}}(\lambda) = \mathbf{V}(\mathbf{S}^\top \mathbf{S} + \lambda\mathbf{I}_p)^{-1} \mathbf{S}^\top \mathbf{U}^\top \mathbf{y}
+$$
+
+The SVD form of the OLS estimator is [@vanwieringen2023lecturenotesridgeregression, p. 9]
+
+$$
+\label{equation-9}
+  \hat{\boldsymbol{\beta}} = \mathbf{V}(\mathbf{S}^\top \mathbf{S})^{-1} \mathbf{S}^\top \mathbf{U}^\top \mathbf{y}
+$$
+
+Note that for the diagonal $n\times p$-matrix $\mathbf{S} = \operatorname{diag}(s_{ii})_{i=1}^p$, we have $\mathbf{S}^\top \mathbf{S} = \operatorname{diag}(s_{ii}^2)_{i=1}^p$ and $(\mathbf{S}^\top \mathbf{S})^{-1} = \operatorname{diag}(1/s_{ii}^2)_{i=1}^p$. Consequently, 
 
 $$
 \begin{align*}
-  \nabla_{\boldsymbol{\beta}} \ell_{\text{ridge}} (\boldsymbol{\beta}; \lambda) = \nabla_{\boldsymbol{\beta}} \lVert \mathbf{y} - \mathbf{X}\boldsymbol{\beta}\rVert_2^2 + \lambda\lVert\boldsymbol{\beta}\rVert_2^2 = -2\mathbf{X}^\top (\mathbf{y} - \mathbf{X}\boldsymbol{\beta}) + 2\lambda \mathbf{I}_p \boldsymbol{\beta} = -2\mathbf{X}^\top \mathbf{y} + 2(\mathbf{X}^\top \mathbf{X} + \lambda\mathbf{I}_p)\boldsymbol{\beta}
+  (\mathbf{S}^\top \mathbf{S})^{-1} \mathbf{S} =& \operatorname{diag}(1/s_{ii})_{i=1}^{\min(n,p)} \\
+  (\mathbf{S}^\top \mathbf{S} + \lambda\mathbf{I}_p)^{-1} \mathbf{S} =& \operatorname{diag}(s_{ii}/(s_{ii}^2 + \lambda))_{i=1}^{\min(n,p)}
 \end{align*}
+$$ 
+
+is a $p\times n$ matric with the reciprocal of the non-zero singular values on the main diagonal. Comparing $(\mathbf{S}^\top \mathbf{S})^{-1} \mathbf{S}$ in [](#equation-8) to $(\mathbf{S}^\top \mathbf{S} + \lambda\mathbf{I}_p)^{-1} \mathbf{S}$ in [](#equation-9), we see that
+
+$$
+  \frac{1}{s_{ii}} \geq \frac{s_{ii}}{s_{ii}^2 + \lambda}
 $$
 
-Equating the gradient to $\mathbf{0}_n$ and solving for $\boldsymbol{\beta}$ gives the ridge estimator
-
-$$
-  \hat{\boldsymbol{\beta}} = (\mathbf{X}^\top \mathbf{X} + \lambda\mathbf{I}_p)^{-1} \mathbf{X}^\top \mathbf{y}
-$$
+This inequality shows that the ridge penalty effectively shrinks the singular values of the OLS estimation, which consequently results in a reduction of the regression coefficients.
 
 ## LASSO Regression ($\ell_1$ Regularization)
 
-LASSO regression, which stands for "last absolute shrinkage and selection operator", adds a regularization to the likelihood function [](#equation-5) with a penalty to the $\ell_1$-norm of the regression coefficients:
+LASSO regression, which stands for "last absolute shrinkage and selection operator", adds a regularization to the cost function [](#equation-5) with a penalty to the $\ell_1$-norm of the regression coefficients:
 
 $$
-  \ell_{\text{LASSO}} (\boldsymbol{\beta};\lambda) = \lVert\mathbf{y} - \mathbf{X}\boldsymbol{\beta}\rVert_2^2 - \lambda\lVert\boldsymbol{\beta}\rVert_1 = \sum_{i=1}^n (y_i - \mathbf{X}_{i,*}\boldsymbol{\beta})^2 + \lambda \sum_{j=1}^p |\beta_j|,
+  C_{\text{LASSO}} (\boldsymbol{\beta}, \lambda) = \frac{1}{n}\lVert\mathbf{y} - \mathbf{X}\boldsymbol{\beta}\rVert_2^2 - \lambda\lVert\boldsymbol{\beta}\rVert_1 = \sum_{i=1}^n (y_i - \mathbf{X}_{i,*}\boldsymbol{\beta})^2 + \lambda \sum_{j=1}^p |\beta_j|,
 $$
 
-Since the $\ell_1$ norm $\lVert\boldsymbol{\beta}\rVert_1$ is not differentiable at $\beta = \mathbf{0}$, there are generally no analytical expressions for the LASSO estimate of $\boldsymbol{\beta}$. However, an analytic expression exists for orthonormal design matrices, i.e. $\mathbf{X}^\top \mathbf{X} = \mathbf{I}_p$. In this case, the maximum likelihood estimate is given by $\hat{\boldsymbol{\beta}} = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y} = \mathbf{X}^\top \mathbf{y}$. Using this we can rewrite the LASSO log-likelihood as
+Since the $\ell_1$ norm $\lVert\boldsymbol{\beta}\rVert_1$ is not differentiable at $\beta = \mathbf{0}$, there are generally no analytical expressions for the LASSO estimation of $\boldsymbol{\beta}$. However, an analytic expression exists for orthonormal design matrices, i.e. $\mathbf{X}^\top \mathbf{X} = \mathbf{I}_p$. In this case, the maximum likelihood estimate is given by $\hat{\boldsymbol{\beta}} = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y} = \mathbf{X}^\top \mathbf{y}$. Using this we can rewrite the LASSO log-likelihood as
 
 $$
 \begin{align*}
@@ -277,96 +291,288 @@ $$
   \end{cases}
 $$
 
-which can be wirtten more compactly as
+which can be written more compactly as
 
 $$
-  \hat{\beta_j} = (\lambda_i) = \operatorname{sign}(\hat{\beta}_j) \left(|\hat{\beta}_j| - \frac{\lambda}{2}\right)_+ =: \operatorname{SoftThreshold}\left(\hat{\beta}_j, \frac{\lambda}{2}\right)
+  \hat{\beta_j} = (\lambda_i) = \operatorname{sign}(\hat{\beta}_j) \left(|\hat{\beta}_j| - \frac{\lambda}{2}\right)_+ =: \operatorname{SoftThreshold}\left(\hat{\beta}_j, \frac{\lambda}{2}\right),
 $$
 
-This shows that the LASSO regression estimation applies a threshold to the maximum likelihood estimation.
+where $x_+ = \max(0, x)$ is the positive part of $x$. This shows that the LASSO regression estimation applies a threshold to the OLS estimation.
 
-While both ridge and LASSO regression achieves shrinkage of the regression coefficients, LASSO regression also achieves selection of regression coeffiecients. This effect follows from the fact that the $\ell_1$-norm penalty creates a diamond-like constraint surface with its corners aligned with the coordinate axes [@vanwieringen2023lecturenotesridgeregression, pp. 109-111].
+The geometric properties of the $\ell_1$​-norm enable LASSO regression to not only shrink regression coefficients but also to perform variable selection. The LASSO optimization problem can be reformulated as a constrained estimation problem, where the penalty term imposes a bound on the $\ell_1$​-norm of the regression coefficients.
 
-As outlined in @vanwieringen2023lecturenotesridgeregression [pp. 112-117], there are several numerical methods for evaluating LASSO regression estimator. This report is based on the coordinate descent method, which minimizes the LASSO log-likelihood function along the coordinates one at a time.
+This penalty creates a diamond-shaped constraint surface, with its vertices aligned along the coordinate axes (see [](#figure-norms)). The LASSO estimator is defined as the point $\hat{\boldsymbol{\beta}}(\lambda)$ within this constraint surface that minimizes the residual sum of squares. Importantly, if this optimal point coincides with one of the vertices of the diamond, it indicates that the corresponding regression coefficient is driven to zero. This characteristic highlights LASSO's ability to effectively select important predictors while excluding those deemed less relevant [@vanwieringen2023lecturenotesridgeregression, pp. 109-111].
+
+```{figure} figures/l1_l2_norms.svg
+:label: figure-norms
+:alt: Comparison of l_1 and l_2 norms
+:align: center
+
+Comparison of the the unit $\ell_1$ and $\ell_2$ norms in $\R^2$.
+```
+As outlined in @vanwieringen2023lecturenotesridgeregression [pp. 112-117], there are several numerical methods for evaluating the LASSO regression estimator. This report is based on the coordinate descent method, which minimizes the LASSO cost function along the coordinates one at a time.
+
+## Resampling Methods
+
+### Bias-Variance Tradeoff
+
+To derive the bias-variance tradeoff, we rewrite the OLS cost function [](#equation-5) with $\hat{\mathbf{y}} = \mathbf{X}\boldsymbol{\beta}$ as a mean squared error
+
+$$
+  C(\boldsymbol{\beta}) = \frac{1}{n} \lVert \mathbf{y} - \hat{\mathbf{y}} \rVert = \frac{1}{n}\sum_{i=1}^n (y_i - \hat{y}_i)^2 = \mathbb{E}[(\mathbf{y} - \hat{\mathbf{y}})^2]
+$$
+
+We assume an underlying noisy model $\mathbf{y} = \mathbf{f} + \boldsymbol{\varepsilon}$, where $\mathbf{f} = \mathbf{f}(\mathbf{x}_0)$ is the true function value for some input $\mathbf{x}_0$ and $\boldsymbol{\varepsilon} \sim\mathcal{N}(\mathbf{0},\sigma^2 \mathbf{I}_n)$ is independent, zero-mean Gaussian noise. We can expand the mean square error in the following way:
+
+$$
+\label{equation-10}
+\begin{split}
+  \mathbb{E}\left[(\mathbf{y} - \hat{\mathbf{y}})^2\right] =& \mathbb{E}[(\mathbf{f} + \boldsymbol{\varepsilon} - \hat{\mathbf{y}})^2] = \mathbb{E}[((\mathbf{f} - \hat{\mathbf{y}}) + \boldsymbol{\varepsilon}^2)] \\
+  =& \mathbb{E}[(\mathbf{f} - \hat{\mathbf{y}})^2 + 2\boldsymbol{\varepsilon}(\mathbf{f} - \hat{\mathhf{y}}) + \boldsymbol{\varepsilon}^2] \\
+  =& \mathbb{E}[(\mathbf{f} - \hat{\mathbf{y}})^2] + 2\underbrace{\mathbb{E}(\boldsymbol{\varepsilon})}_{=0}\mathbb{E}(\mathbf{f} - \hat{\mathbf{y}}) + \underbrace{\mathbb{E}(\boldsymbol{\varepsilon}^2)}_{=\operatorname{var}(\boldsymbol{\varepsilon})} \\
+  =& \mathbb{E}[(\mathbf{f} - \hat{\mathbf{y}})^2] + \sigma^2
+\end{split}
+$$
+
+where we have used the fact that $\boldsymbol{\varepsilon}$ is independent from the $\mathbf{f} - \hat{\mathbf{y}}$, which is deterministic. Expanding the first expected value by adding and subtracting $\mathbb{E}(\hat{\mathbf{y}})$ we get
+
+$$
+\label{equation-11}
+\begin{split}
+  \mathbb{E}\left[(\mathbf{f} - \hat{\mathbf{y}})^2\right] =& \mathbb{E}\left[([\mathbf{f} - \mathbb{E}(\hat{\mathbf{y}})] + [\mathbb{E}(\hat{\mathbf{y}}) - \hat{\mathbf{y}}])^2\right] \\
+  =& \mathbb{E}\left[(\mathbf{f} - \mathbb{E}(\hat{\mathbf{y}}))^2\right] + 2\mathbb{E}\left[(\mathbf{f} - \mathbb{E}(\hat{\mathbf{y}}))(\mathbb{E}(\hat{\mathbf{y}}) - \hat{\mathbf{y}})\right] + \mathbb{E}\left[(\mathbb{E}(\hat{\mathbf{y}}) - \hat{\mathbf{y}})^2\right]
+\end{split}
+$$
+
+Expanding the cross-term, we find
+
+$$
+\begin{align*}
+  2\mathbb{E}\left[(\mathbf{f} - \mathbb{E}(\hat{\mathbf{y}}))(\mathbb{E}(\hat{\mathbf{y}}) - \hat{\mathbf{y}})\right] =& \mathbb{E}\left[\mathbf{f}\mathbb{E}(\hat{\mathbf{y}})\right] - \mathbb{E}\left[\mathbf{f}\hat{\mathbf{y}}\right] - \mathbb{E}\left[\mathbb{E}(\hat{\mathbf{y}})^2\right] + \mathbb{E}\left[\mathbb{E}(\hat{\mathbf{y}})\mathbf{f}\right] \\
+  =& \mathbb{f}\mathbb{E}(\hat{\mathbb{y}}) - \mathbb{f}\mathbb{E}(\hat{\mathbf{y}}) - \mathbb{E}(\hat{\mathbf{y}})^2 + \mathbb{E}(\hat{\mathbf{y}})^2 \\
+  =& 0
+\end{align*}
+$$
+
+where we have used the fact that 
+
+$$
+\begin{equation*}
+  \mathbb{E}\left[\mathbf{f}\mathbb{E}(\hat{\mathbf{y}})\right] = \mathbb{E}(\mathbf{f})\mathbb{E}\left[\mathbb{E}(\hat{\mathbf{y}})\right] = \mathbf{f}\mathbb{E}(\hat{\mathbf{y}})
+\end{equation*}
+$$
+
+Inserting [](#equation-11) back into [](#equation-10) and using the fact that $\mathbb{E}\left[(\mathbb{E}(\hat{\mathbf{y}}) - \hat{\mathbf{y}})^2\right] = \mathbb{E}\left[(\hat{\mathbf{y}} - \mathbb{E}(\hat{\mathbf{y}}))^2\right] = \operatorname{var}(\hat{\mathbf{y}})$ (since variance is symmetric) we get
+
+$$
+\begin{align*}
+  \mathbb{E}\left[(\mathbf{f} - \hat{\mathbf{y}})^2\right] =& \mathbb{E}\left[(\mathbf{f} - \mathbb{E}(\hat{\mathbf{y}}))^2\right] + \mathbb{E}\left[(\mathbb{E}(\hat{\mathbf{y}}) - \hat{\mathbf{y}})^2\right] + \sigma^2 \\
+  =& \operatorname{bias}(\hat{\mathbf{y}}) - \operatorname{var}(\hat{\mathbf{y}}) + \sigma^2
+\end{align*}
+$$
+
+The bias term, $\operatorname{bias}(\hat{\mathbf{y}}) = \mathbb{E}\left[(\mathbf{f} - \hat{\mathbf{y}})^2\right]$, 
+is the squared difference between the true function value $f(\mathbf{x}_0)$ and the mean predicted value $\mathbb{E}(\hat{\mathbf{y}}) = \mathbb{E}(\hat{f}(\mathbf{x}_0))$ a given input $\mathbf{x}_0$. A model with high bias tends to be too simplistic, capturing only the general trend of the data while ignoring important patterns. This leads to underfitting, where the model performs poorly on both the training and testing datasets.
+
+The variance term, $\operatorname{var}(\hat{\mathbf{y}}) = \mathbb{E}\left[(\mathbb{E}(\hat{\mathbf{y}}) - \hat{\mathbf{y}})^2\right]$ measures the spread of the model predictions $\hat{\mathbf{y}}$. A model with high variance is sensitive to the sampling noise, rather than the underlying patterns. This leads to overfitting, where the model performs well on the training data but poorly on unseen data, as it fails to generalize.
+
+The $\operatorname{var} = \sigma^2 \geq 0$ term represents irreducible error, due to the inherent noise in the data. This error cannot be reduced through model optimization and regularization, and represents a lower bound on the expected prediction error.
+
+The bias-variance tradeoff suggests that there is a balance between model complexity and expected prediction error. 
+When we increase model complexity, we typically see a decrease in bias. The model can better approximate the true relationship within the data. However, this comes at the cost of increased variance, as the model may become overly sensitive to noise in the training data. Conversely, if we simplify the model, bias may increase because the model may not capture the underlying patterns adequately. However, variance tends to decrease, resulting in a model that is less sensitive to changes in the test data.
+
+## Data Generation Using Franke's Function
+
+Franke's function was used to generate training data for the polynomial regression models. This is a two-dimensional scalar field $f:\R^2 \to\R$ given by a weighted sum of four exponentials:
+
+$$
+\label{equation-12}
+\begin{split}
+  f(x,y) =& \frac{3}{4} \exp\left(-\frac{(9x - 2)^2}{4} - \frac{(9y - 2)^2}{4} \right) \\
+  &+ \frac{3}{4}\exp\left(\frac{(9x + 1)^2}{49} - \frac{9y + 1}{10}\right) \\
+  &+ \frac{1}{2}\exp\left(-\frac{(9x - 7)^2}{4} - \frac{(9y - 3)^2}{4} \right) \\
+  &- \frac{1}{5}\exp\left(-(9x - 4)^2 - (9y - 7)^2 \right)
+\end{split}
+$$
+
+A plot of the Franke function on the unit square $[0,1]^2$ is given in [](#figure-1). We used two approaches to generate training data sets using [](#equation-12). One approach was to apply the function for standard uniformly distributed input values. With $n$ input samples, this generates training data of the form
+
+$$
+  S = \Set{((x_i, y_i), f(x_i, y_i)) : x_i, y_i \sim \operatorname{Uniform}(0,1)}_{i=1}^n
+$$
+
+Here the standard uniform distribution is used to confine the input values to the unit square $[0,1]^2$. Another approach was to apply the function on linearly spaced input values on the unit square $[0,1]^2$. Additionally, we modified the Franke function by adding normal distributed noise:
+
+$$
+  \hat{f}(x, y) = f(x, y) + \varepsilon,\; \varepsilon\sim\mathcal{N}(0,\sigma^2),
+$$
+
+The two given methods ensure that the input values are confined to the range $[0,1]$. Additionally, the input data can be translated to have zero mean and scaled to have unit variance. This kind of data transformation is a standard procedure in machine learning to improve numerical stability and performance of optimization algorithms by enforcing the input features to have the same scale. A particular concern in polynomial regression is that higher-degree terms tend to amplify the input values. Scaling and centering the input data help ensure that all features contribute equally to the model. 
+
+As a final preprocessing step, we split the generated data into a training set applied on the regression models and a test set used for model validation. We used a train/test ratio of 0.8 throughout our experiments and applied random shuffling of the data before doing the split. This is especially important when using linearly spaced input variables to generate data with the Franke function. As seen from [](#figure-1), the Franke function creates distinct regions of elevations and depressions. Without shuffling we risk creating train and test sets that are consistenly different, which may result in a model that does not generalize well.
+
+```{figure} figures/franke.svg
+:label: figure-1
+:alt: Franke function
+:align: center
+
+Plot of the Franke function on the unit square $[0,1]^2$.
+```
+
+## Regression Model Evaluation
+
+In this study, we evaluated the performance of the trained regression models by applying them to a test set, which allowed us to generate predicted values $\hat{\mathbf{y}} = \mathbf{X}_{\text{test}}\hat{\boldsymbol{\beta}}$. The models' expected prediction error was assessed using two key metrics: Mean Squared Error (MSE) and the $R^2$ score. For a test set with $n$ data points, the mean squared error is defined as
+
+$$
+  \operatorname{MSE}(\mathbf{y}, \hat{y}) = \frac{1}{n} \sum_{i=1}^n (y_i - \hat{y}_i)^2
+$$
+
+where $y_i$ represents the observed values and $\hat{y}_i$ denote the predicted values for each data point $\mathbf{x}_i$. MSE quantifies the average squared difference between the observed and predicted values, providing a measure of the model's accuracy; lower MSE values indicate better model performance.
+
+The $R^2$ score, also know as the coefficient of determination, is given defined as
+
+$$
+  R^2 (\mathbf{y}, \hat{\mathbf{y}}) = 1 - \frac{\sum_{i=1}^n (y_i - \hat{y}_i)^2}{\sum_{i=1}^n (y_i - \bar{y})^2}
+$$
+
+where $\bar{y} = \frac{1}{n}\sum_{i=0}^n y_i$ is the mean of the observed test responses $\mathbf{y}$. The $R^2$ score measures the proportion of variance in the dependent variable that is predictable from the independent variables. An $R^2$ value closer to 1 indicates that a larger proportion of variance is explained by the model, while values closer to 0 suggest a poor fit.
+
+To ensure robustness in our evaluation, we employed bootstrap resampling to calculate both the MSE and $R^2$ score. Bootstrap resampling involves repeatedly drawing samples from the test set with replacement. This allows us observe the relative frequency of the regression parameter $\hat{\boldsymbol{\beta}}$ in order estimate its underlying probability distribution
+
+We also examined $k$-fold cross-validation in our regression analysis. In this method, the dataset is partitioned into $k \leq n$ equally sized folds. The model is trained on $k−1$ folds and validated on the remaining fold, a process that is repeated $k$ times, with each fold serving as the validation set once. This approach ensures that each sample is represented in both the training and test sets across the different splits. 
 
 # Results
 
 ## Polynomial Regression of the Franke Function
 
-This section presents the result from running ordinary least squares regression of the Franke function. The training data were generated by calculating the Franke function on linearly spaced input vectors in the domain $[0,1]\times[0,1]$ and then adding normal distributed noise scaled by $0.1$.
-
 ### Ordinary Least Squares
 
-Polynomial regression using ordinary least squares was performed in experiments with datasets of $100$ and $10,000$ samples (prior to 4/5 train/test split), respectively, generated by a noisy Franke function. The results from these experiments are shown in [](#figure-3). In the $100$-sample case, we observed significant fluctuations in the mean squared error (MSE) and $R^2$ scores for polynomial models of degree $7$ and higher, indicating instability in model performance. This case was run in $1,000$ simulations to gain a clearer understanding of the trends associated with higher-order polynomial models, particularly when the dataset size is comparable to the number of regression coefficients.
+#### Bootstrap Resampling
 
-Overall, the results indicate that polynomial models generally improve with increasing degree, which aligns with the expectation that a higher polynomial degree introduces greater complexity to the model. However, this increased complexity can also lead to overfitting, particularly in smaller datasets. This appears to be the case when the number of regression coefficients become comparable the sample size. A $7$-degree bivariate polynomial has $\binom{9}{7} = 36$ regression coefficients which is nearly half of the $80$ training points in the $100$-sample case.
+Polynomial regression using ordinary least squares was performed in experiments with datasets of $100$ and $10,000$ samples (prior to 4/5 train/test split), respectively, generated by a noisy Franke function. The results from these experiments are shown in [](#figure-3).
 
-Notably, polynomial models of degree $7$ and higher occasionally yielded negative $R^2$ scores in the $100$-sample case, suggesting significant overfitting. A negative $R^2$ indicates that the model performs worse than a simple mean of the observed data, implying that the complexity of these higher-degree models captures noise rather than the underlying trend. This phenomenon underscores the risk of overfitting in polynomial regression, particularly when the model complexity exceeds the information available in the data.
+In the $100$-sample case with a noise root variance of $0.05$, model performance improves with increasing polynomial degree up to $5$, after which performance tends to deteriorate. This indicates that while higher degrees initially capture the underlying patterns better, they eventually lead to overfitting. This effect becomes particularly pronounced at a noise variance of $0.5$, where the mean squared error rises sharply for polynomial degrees above $6$, demonstrating the model's sensitivity to noise and its tendency to overfit. 
 
-[](#figure-4) illustrates the regression coefficients obtained from polynomial ordinary least squares regression for degrees up to five. Notably, the coefficients exhibit similar values across the various degrees, indicating a degree of stability in the model's parameter estimates as the polynomial complexity increases.
+In the setting with noise root variance of $0.5$, we also observe negative $R^2$ scores for higher order polynomials, further indicating signifiant overfitting. A negative $R^2$ indicates that the model performs worse than a simple mean of the observed data, implying that the complexity of these higher-degree models captures noise rather than the underlying trend.
+
+In the $100$-sample case, the point at which higher-order polynomials begin to deteriorate seems to coincide with the number of regression coefficients becoming comparable to the sample size. For instance, a $7$-degree bivariate polynomial has $\binom{9}{7}=36$ regression coefficients, which is nearly half of the $80$ training points available in this scenario.
+
+In the $10,000$-sample case, we do not observe any deterioration in performance for polynomial degrees up to $8$, indicating that the sample size is sufficient to support more complex models. When the noise amplitude is increased to $0.5$, we note that this primarily results in elevated mean squared error, but does not significantly impact the training process. This outcome is expected, as increased noise introduces higher irreducible error, which cannot be mitigated by merely increasing model complexity.
+
+[](#figure-4) illustrates the regression coefficients obtained from polynomial ordinary least squares regression for degrees up to five. The coefficients exhibit similar values across the various degrees, indicating a degree of stability in the model's parameter estimates as the polynomial complexity increases.
 
 Interestingly, the fourth and fifth-degree polynomials display identical values for the coefficients $\beta_i$​ where $i=10,\dots,14$. This suggests that the addition of higher-order terms beyond degree four does not contribute significantly to the model, reinforcing the idea of potential overfitting when utilizing more complex models.
 
-Among the coefficients, $\beta_2$ corresponding to $x_2$,​ stands out with a notably strong negative value. This indicates a significant inverse relationship between the corresponding predictor variable and the response variable, which may play a crucial role in the overall behavior of the model.
+Among the coefficients, $\beta_2$ corresponding to $x_2$,​ stands out with a notably strong negative value. This indicates a significant inverse relationship between the corresponding predictor variable and the response variable.
 
-```{figure} figures/ols_franke_mse_r2.svg
+```{figure} figures/ols_franke_bootstrap_mse_r2.svg
 :label: figure-3
 :alt: MSE and R^2 for polynomial OLS regression of the Franke function
 :align: center
 
-Mean squared error and $R^2$ scores for polynomial ordinary least squares regression on data generated by a noisy Franke function. The top row presents results from $100$ samples, averaged over $1,000$ simulations, while the bottom row shows results from $10,000$ samples, based on a single simulation. Note that outliers have been omitted from the box plots in the top row.
+Mean squared error (MSE) and $R^2$ scores for polynomial ordinary least squares regression on data generated by a noisy Franke function, assessed across various sample sizes and noise standard deviations. The results are based on $100$ bootstrap resamples.
 ```
 
 ```{figure} figures/ols_franke_coefficients.svg
 :label: figure-4
-:alt: Polynomial OLS regression coefficients for the Franke function
+:alt: Polynomial OLS regression coefficients for the Franke function using bootstrap resampling
 :align: center
 
-Regression coefficients from polynomial ordinary least squares regression applied to $10,000$ samples generated by a noisy Franke function. The vertical lines indicate the number of coefficients corresponding to each polynomial degree.
+Regression coefficients from polynomial ordinary least squares regression applied to $10,000$ samples generated by a noisy Franke function with a standard deviation of $0.1$. The vertical lines indicate the number of coefficients corresponding to each polynomial degree. The results are based on $100$ bootstrap resamples.
+```
+
+#### $k$-Fold Cross-Validation
+
+[](#figure-10) presents the results of 10-fold cross-validation for polynomial regression using ordinary least squares applied to data generated by a noisy Franke function. The findings are consistent with those observed in the bootstrap resampling approach; however, cross-validation appears to be more sensitive to noise in the 100-sample case. Specifically, the mean squared error (MSE) increases significantly with higher-degree polynomials, indicating a greater susceptibility to overfitting in the presence of noise.
+
+```{figure} figures/ols_franke_bootstrap_mse_r2.svg
+:label: figure-10
+:alt: MSE and R^2 for polynomial OLS regression of the Franke function using cross-validation
+:align: center
+
+Mean squared error (MSE) and $R^2$ scores for polynomial ordinary least squares regression on data generated by a noisy Franke function, assessed across various sample sizes and noise standard deviations. The results are based on $10$-fold cross-validation.
+```
+
+#### Bias-Variance Tradeoff
+
+[](#figure-9) shows bias-variance tradeoff for polynomial ordinary least squares regression applied to data generated by a noisy Franke function. For the case with 100 samples, we observe that the test error consistently increases with polynomial degree, regardless of the noise level. In contrast, with 10,000 samples, the test error remains closely aligned with the training error as model complexity increases. However, this trend shifts when the noise root variance is raised to 1.0, indicating a more pronounced effect of noise on model performance.
+
+```{figure} figures/ols_franke_bootstrap_bias_variance.svg
+:label: figure-9
+:alt: Bias-variance tradeoff for polynomial ordinary least squares regression for the Franke function
+:align: center
+
+Bias-variance tradeoff for ordinary least squares regression applied to data generated by a noisy Franke function, evaluated across various sample sizes and noise standard deviations. The results are derived from 100 bootstrap resamples.
 ```
 
 ### Ridge Regression
+
+#### Bootstrap Resampling
 
 [](#figure-5) presents the mean squared error and $R^2$ scores for polynomial ridge regression applied to data generated by a noisy Franke function, evaluated across a range of regularization parameters $\lambda$. Notably, when $\lambda$ is below $1,000$, the performance metrics closely resemble those observed in ordinary least squares regression, indicating minimal regularization effects. However, as $\lambda$ exceeds $100,000$, the performance of higher-degree polynomial models deteriorates, suggesting that excessive regularization may hinder their ability to capture the underlying data structure. This trend underscores the importance of selecting an appropriate regularization parameter to balance bias and variance in polynomial ridge regression.
 
 [](#figure-4) displays the regression coefficients derived from polynomial ridge regression with a regularization parameter $λ=1,000$ for polynomial degrees up to five. Notably, the coefficients are an order of magnitude lower than those obtained from ordinary least squares (OLS) regression. This significant reduction highlights the impact of regularization in constraining coefficient values. Furthermore, the ridge regression coefficients exhibit more extreme values compared to the OLS coefficients, which predominantly cluster around zero with only a few exhibiting large magnitudes. This shift in the distribution of coefficients underscores the role of regularization in managing complexity and controlling overfitting.
 
-```{figure} figures/ridge_franke_mse_r2.svg
+```{figure} figures/ridge_franke_bootstrap_mse_r2.svg
 :label: figure-5
 :alt: MSE and R^2 for polynomial ridge regression of the Franke function
 :align: center
 
-Mean squared error and $R^2$ scores for polynomial ridge regression on data generated by a noisy Franke function using $10,000$ samples. The results illustrate the performance across various regularization parameters $\lambda$.
+Mean squared error and $R^2$ scores for polynomial ridge regression on $10,000$ samples generated by a noisy Franke function having a standard deviation of $0.5$. The results are based on $100$ bootstrap resamples.
 ```
 
-```{figure} figures/ridge_franke_coefficients.svg
-:label: figure-5
+```{figure} figures/ridge_franke_bootstrap_coefficients.svg
+:label: figure-6
 :alt: Polynomial ridge regression coefficients for the Franke function
 :align: center
 
-Regression coefficients from polynomial ridge regression with a regularization parameter $\lambda=1,000$ applied to $10,000$ samples generated by a noisy Franke function. The vertical lines indicate the number of coefficients corresponding to each polynomial degree.
+Regression coefficients from polynomial ridge regression with a regularization parameter $\lambda=1,000$ applied to $10,000$ samples generated by a noisy Franke function having a standard deviation of $0.1$. The vertical lines indicate the number of coefficients corresponding to each polynomial degree. The results are based on $100$ bootstrap resamples.
 ```
 
-### LASSO Regression
+#### $k$-Fold Cross-Validation
 
-[](#figure-6) presents the mean squared error and $R^2$ scores for polynomial LASSO regression applied to data generated by a noisy Franke function, evaluated across a range of regularization parameters $\lambda$. Similar to the behavior observed in ridge regression, when $\lambda$ is below $100$, the performance metrics closely resemble those observed in ordinary least squares regression, indicating minimal regularization effects. When $\lambda$ ranges between $500$ and $1000$, lower-degree polynomial models shows improved performance relative to their higher-degree counterparts, indicating a beneficial effect of regularization in these cases. However, once $\lambda$ exceeds $2000$, model performance begins to decline significantly, indicating over-regularization.
+[](#figure-11) shows the results of 10-fold cross-validation for polynomial ridge regression applied to data generated by a noisy Franke function. The findings are consistent with those observed in the bootstrap resampling approach.
 
-[](#figure-7) displays the regression coefficients derived from polynomial LASSO regression with a regularization parameter $λ=750$ for polynomial degrees up to five. Notably, only a few coefficients exhibit significant values, with the majority remaining near or equal to zero. This sparsity in the coefficient values reflects the effectiveness of LASSO in feature selection, effectively reducing the complexity of the model by retaining only the most influential terms while minimizing the impact of less significant ones.
+```{figure} figures/ridge_franke_bootstrap_mse_r2.svg
+:label: figure-11
+:alt: MSE and R^2 for polynomial ridge regression of the Franke function using cross-validation
+:align: center
 
-```{figure} figures/lasso_franke_mse_r2.svg
-:label: figure-6
+Mean squared error (MSE) and $R^2$ scores for polynomial ridge regression on data generated by a noisy Franke function, assessed across various sample sizes and noise standard deviations. The results are based on $10$-fold cross-validation.
+```
+
+### LASSO Regression (Bootstraping)
+
+[](#figure-7) presents the mean squared error and $R^2$ scores for polynomial LASSO regression applied to data generated by a noisy Franke function, evaluated across a range of regularization parameters $\lambda$. Similar to the behavior observed in ridge regression, when $\lambda$ is below $100$, the performance metrics closely resemble those observed in ordinary least squares regression, indicating minimal regularization effects. When $\lambda$ ranges between $500$ and $1000$, lower-degree polynomial models shows improved performance relative to their higher-degree counterparts, indicating a beneficial effect of regularization in these cases. However, once $\lambda$ exceeds $2000$, model performance begins to decline significantly, indicating over-regularization.
+
+[](#figure-8) displays the regression coefficients derived from polynomial LASSO regression with a regularization parameter $λ=750$ for polynomial degrees up to five. Notably, only a few coefficients exhibit significant values, with the majority remaining near or equal to zero. This sparsity in the coefficient values reflects the effectiveness of LASSO in feature selection, effectively reducing the complexity of the model by retaining only the most influential terms while minimizing the impact of less significant ones.
+
+```{figure} figures/lasso_franke_bootstrap_mse_r2.svg
+:label: figure-7
 :alt: MSE and R^2 for polynomial LASSO regression of the Franke function
 :align: center
 
-Mean squared error and $R^2$ scores for polynomial LASSO regression on data generated by a noisy Franke function using $10,000$ samples. The results illustrate the performance across various regularization parameters $\lambda$.
+Mean squared error and $R^2$ scores for polynomial LASSO regression on $10,000$ samples generated by a noisy Franke function with standard deviation of $0.5$. The results are based on $10$ bootstrap resamples.
 ```
 
-```{figure} figures/lasso_franke_coefficients.svg
-:label: figure-7
+```{figure} figures/lasso_franke_bootstrap_coefficients.svg
+:label: figure-8
 :alt: Polynomial LASSO regression coefficients for the Franke function
 :align: center
 
-Regression coefficients from polynomial LASSO regression with a regularization parameter $\lambda=750$ applied to $10,000$ samples generated by a noisy Franke function. The vertical lines indicate the number of coefficients corresponding to each polynomial degree.
+Regression coefficients from polynomial LASSO regression with a regularization parameter $\lambda=750$ applied to $10,000$ samples generated by a noisy Franke function a standard deviation of $0.1$. The vertical lines indicate the number of coefficients corresponding to each polynomial degree. The results are based on $100$ bootstrap resamples.
+```
+
+#### $k$-Fold Cross-Validation
+
+[](#figure-12) shows the results of 10-fold cross-validation for polynomial LASSO regression applied to data generated by a noisy Franke function. The findings are consistent with those observed in the bootstrap resampling approach.
+
+```{figure} figures/lasso_franke_bootstrap_mse_r2.svg
+:label: figure-12
+:alt: MSE and R^2 for polynomial LASSO regression of the Franke function using cross-validation
+:align: center
+
+Mean squared error (MSE) and $R^2$ scores for polynomial ridge regression on data generated by a noisy Franke function, assessed across various sample sizes and noise standard deviations. The results are based on $10$-fold cross-validation.
 ```
 
 # Conclusion
