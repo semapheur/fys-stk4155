@@ -342,39 +342,6 @@ function cross_validation_lasso(
   return mse, r2
 end
 
-function bias_variance_ols(
-  trails::Int,
-  samples::Int,
-  noise_amplitude::Float64,
-  train_ratio::Float64,
-  degrees::Int,
-  random_inputs::Bool=false,
-)
-  x, y = franke_training_data(samples, noise_amplitude, random_inputs)
-  x_scaled = standardize_data(x)
-
-  test_error = zeros(degrees + 1)
-  train_error = zeros(degrees + 1)
-
-  for p = 0:degrees
-    x_poly = polynomial_design_matrix(x_scaled, p)
-
-    for _ = 1:trials
-      x_train, x_test, y_train, y_test = train_test_split(x_poly, y, train_ratio)
-      β = ordinary_least_squares(x_train, y_train)
-      y_pred_test = x_test * β
-      y_pred_train = x_train * β
-      test_error[p+1] += mean((y_test - y_pred_test) .^ 2)
-      train_error[p+1] += mean((y_train - y_pred_train) .^ 2)
-    end
-  end
-
-  train_error ./= trails
-  test_error ./= trails
-
-  return test_error, train_error
-end
-
 function ridge_optimize_lambda(
   lambdas::Vector{Float64},
   folds::Int,
