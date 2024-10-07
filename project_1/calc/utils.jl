@@ -207,6 +207,7 @@ function cross_validation_ols(
   samples::Int,
   degrees::Int,
   noise_amplitude::Float64,
+  aggregate::Bool=true,
   random_inputs::Bool=false,
 )
   x, y = franke_training_data(samples, noise_amplitude, random_inputs)
@@ -240,7 +241,11 @@ function cross_validation_ols(
     end
   end
 
-  return mean(mse, dims=2), mean(r2, dims=2)
+  if aggregate
+    return mean(mse, dims=2), mean(r2, dims=2)
+  end
+
+  return mse, r2
 end
 
 function cross_validation_ridge(
@@ -249,6 +254,7 @@ function cross_validation_ridge(
   degrees::Int,
   λ::Float64,
   noise_amplitude::Float64,
+  aggregate::Bool=true,
   random_inputs::Bool=false,
 )
   x, y = franke_training_data(samples, noise_amplitude, random_inputs)
@@ -282,7 +288,11 @@ function cross_validation_ridge(
     end
   end
 
-  return mean(mse, dims=2), mean(r2, dims=2)
+  if aggregate
+    return mean(mse, dims=2), mean(r2, dims=2)
+  end
+
+  return mse, r2
 end
 
 function cross_validation_lasso(
@@ -291,6 +301,7 @@ function cross_validation_lasso(
   degrees::Int,
   λ::Float64,
   noise_amplitude::Float64,
+  aggregate::Bool=true,
   random_inputs::Bool=false,
 )
   x, y = franke_training_data(samples, noise_amplitude, random_inputs)
@@ -324,7 +335,11 @@ function cross_validation_lasso(
     end
   end
 
-  return mean(mse, dims=2), mean(r2, dims=2)
+  if aggregate
+    return mean(mse, dims=2), mean(r2, dims=2)
+  end
+
+  return mse, r2
 end
 
 function bias_variance_ols(
@@ -358,6 +373,82 @@ function bias_variance_ols(
   test_error ./= trails
 
   return test_error, train_error
+end
+
+function ridge_optimize_lambda(
+  lambdas::Vector{Float64},
+  folds::Int,
+  samples::Int,
+  degree::Int,
+  noise_amplitude::Float64,
+  random_inputs::Bool=false,
+)
+  x, y = franke_training_data(samples, noise_amplitude, random_inputs)
+  x_scaled = standardize_data(x)
+  x_poly = polynomial_design_matrix(x_scaled, degree)
+
+  n = size(x, 1)
+  kfolds = kfold_split(n, folds)
+
+  mse = zeros(length(lambdas), folds)
+  r2 = zeros(length(lambdas), folds)
+
+  for (i, λ) in enumerate(lambdas)
+    for (fold_idx, test_indices) in enumerate(kfolds)
+      train_indices = setdiff(1:n, test_indices)
+
+      x_train = x_poly[train_indices, :]
+      y_train = y[train_indices]
+      x_test = x_poly[test_indices, :]
+      y_test = y[test_indices]
+
+      β = ridge_regression(x_train, y_train, λ)
+      y_pred = x_test * β
+
+      mse[i, fold_idx] = mean((y_test - y_pred) .^ 2)
+      r2[i, fold_idx] = r_squared(y_test, y_pred)
+    end
+  end
+
+  return mse, r2
+end
+
+function lasso_optimize_lambda(
+  lambdas::Vector{Float64},
+  folds::Int,
+  samples::Int,
+  degree::Int,
+  noise_amplitude::Float64,
+  random_inputs::Bool=false,
+)
+  x, y = franke_training_data(samples, noise_amplitude, random_inputs)
+  x_scaled = standardize_data(x)
+  x_poly = polynomial_design_matrix(x_scaled, degree)
+
+  n = size(x, 1)
+  kfolds = kfold_split(n, folds)
+
+  mse = zeros(length(lambdas), folds)
+  r2 = zeros(length(lambdas), folds)
+
+  for (i, λ) in enumerate(lambdas)
+    for (fold_idx, test_indices) in enumerate(kfolds)
+      train_indices = setdiff(1:n, test_indices)
+
+      x_train = x_poly[train_indices, :]
+      y_train = y[train_indices]
+      x_test = x_poly[test_indices, :]
+      y_test = y[test_indices]
+
+      β = lasso_regression(x_train, y_train, λ)
+      y_pred = x_test * β
+
+      mse[i, fold_idx] = mean((y_test - y_pred) .^ 2)
+      r2[i, fold_idx] = r_squared(y_test, y_pred)
+    end
+  end
+
+  return mse, r2
 end
 
 function plot_mse_r2(
