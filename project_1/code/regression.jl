@@ -305,6 +305,64 @@ function franke_training_data(
 end
 
 """
+Read a GeoTIFF file and sample `samples` random points.
+
+# Parameters
+- `file_path::String`: The path to the GeoTIFF file.
+- `samples::Int`: The number of samples to take.
+
+# Returns
+- `X::Matrix{Float64}`: A matrix of size `(samples, 2)` containing the
+  coordinates of the sampled points.
+- `y::Vector{Float64}`: A vector of length `samples` containing the values
+  of the sampled points.
+
+# Throws
+- `ArgumentError`: If the file is not found or if the requested samples exceed
+  the available pixels.
+"""
+function tif_training_data(file_path::String, samples::Int)
+  if !isfile(file_path)
+    throw(ArgumentError("File not found: $file_path"))
+  end
+
+  dataset = ArchGDAL.read(file_path)
+  band_data = ArchGDAL.read(dataset, 1)
+
+  rows, cols = size(band_data)
+  if samples > rows * cols
+    throw(
+      ArgumentError(
+        "Requested samples ($samples) exceed available pixels ($(rows * cols))",
+      ),
+    )
+  end
+
+  y = Vector{Float64}(undef, samples)
+  x_1 = Vector{Float64}(undef, samples)
+  x_2 = Vector{Float64}(undef, samples)
+
+  sampled_points = Set{Tuple{Int,Int}}()
+  i = 1
+  while i <= samples
+    row = rand(1:rows)
+    col = rand(1:cols)
+
+    if (row, col) ∉ sampled_points
+      push!(sampled_points, (row, col))
+      x_1[i] = row
+      x_2[i] = col
+      y[i] = band_data[row, col]
+      i += 1
+    end
+  end
+
+  X = hcat(x_1, x_2)
+
+  return X, y
+end
+
+"""
 Generate all combinations of polynomial terms for a given number of variables
 and degree.
 
