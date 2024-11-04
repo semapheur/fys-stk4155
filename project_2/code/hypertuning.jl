@@ -2,7 +2,6 @@ include("./activation.jl")
 include("./learning_rate.jl")
 include("./neural_network.jl")
 include("./preprocessing.jl")
-include("./stats.jl")
 
 using BenchmarkTools
 using CategoricalArrays
@@ -21,17 +20,16 @@ struct Hyperparams
   l2_lambda::Float64
 end
 
-struct MyTuneScore
+struct RegressionScore
   params::Hyperparams
   mse_mean_std::Tuple{Float64,Float64}
   r2_mean_std::Tuple{Float64,Float64}
   time_mean_std::Tuple{Float64,Float64}
 end
 
-struct MyModelScore
-  model::String
-  mse_mean_std::Tuple{Float64,Float64}
-  r2_mean_std::Tuple{Float64,Float64}
+struct BinaryScore
+  params::Hyperparams
+  accuracy_mean_std::Tuple{Float64,Float64}
   time_mean_std::Tuple{Float64,Float64}
 end
 
@@ -61,7 +59,7 @@ function hidden_layer_configs(num_layers::Int, min_exp::Int, max_exp::Int)
   return unique(hidden_layer_configs)
 end
 
-function print_score(tune_score::MyTuneScore)
+function print_score(tune_score::RegressionScore)
   text = """
   Layers: $(tune_score.params.layer_sizes), LR: $(@sprintf("%.2e", tune_score.params.lr)), L2: $(@sprintf("%.2e", tune_score.params.l2_lambda))
   MSE: $(@sprintf("%.2e", tune_score.mse_mean_std[1])) (±$(@sprintf("%.2e", tune_score.mse_mean_std[2])))
@@ -70,148 +68,6 @@ function print_score(tune_score::MyTuneScore)
   """
 
   println(text)
-end
-
-function evaluate_network(
-  x::Matrix{Float64},
-  y::Matrix{Float64},
-  model::NeuralNetwork,
-  k_folds::Int=5,
-  n_epochs::Int=100,
-  batch_size::Int=32,
-)
-  training_times = zeros(k_folds)
-  mse_scores = zeros(k_folds)
-  r2_scores = zeros(k_folds)
-  split = kfold_split(size(x, 1), k_folds, true)
-
-  for i = 1:k_folds
-    train_idx, val_idx = get_fold(split, i)
-
-    x_train = x[train_idx, :]
-    y_train = y[train_idx, :]
-
-    x_val = x[val_idx, :]
-    y_val = y[val_idx, :]
-
-    training_start = time_ns()
-    _ = train_network(model, x_train, y_train, n_epochs, batch_size, false)
-    training_times[i] = (time_ns() - training_start) / 1e9
-
-    y_pred = predict(model, x_val)
-    mse_scores[i] = mean((y_val - y_pred) .^ 2)
-    r2_scores[i] = r_squared(y_val, y_pred)
-  end
-
-  return skipmissing(mse_scores), skipmissing(r2_scores), training_times
-end
-
-# Not working, strugling with DimensionMismatch errors that I can't figure out
-function evaluate_flux(
-  x::Matrix{Float64},
-  y::Matrix{Float64},
-  layer_sizes::Vector{Int},
-  hidden_activation::Function,
-  output_activation::Union{Function,Nothing},
-  lr::Float64,
-  l2_lambda::Float64,
-  k_folds::Int,
-  epochs::Int,
-  batch_size::Int,
-)
-  function create_model(
-    layer_sizes::Vector{Int},
-    hidden_activation::Function,
-    output_activation::Union{Function,Nothing},
-  )
-    layers = []
-
-    # Create the hidden layers
-    for i = 1:(length(layer_sizes)-2)
-      push!(layers, Dense(layer_sizes[i], layer_sizes[i+1], hidden_activation))
-    end
-
-    # Create the output layer
-    if output_activation === nothing
-      push!(layers, Dense(layer_sizes[end-1], layer_sizes[end]))
-    else
-      push!(layers, Dense(layer_sizes[end-1], layer_sizes[end], output_activation))
-    end
-
-    # Create the Chain with the layers
-    return Chain(layers...)
-  end
-
-  training_times = zeros(k_folds)
-  mse_scores = zeros(k_folds)
-  r2_scores = zeros(k_folds)
-  split = kfold_split(size(x, 1), k_folds, true)
-
-  x = reshape(x, size(x, 2), size(x, 1))
-  y = reshape(y, size(y, 2), size(y, 1))
-
-  for i = 1:k_folds
-    train_idx, val_idx = get_fold(split, i)
-
-    x_train = x[:, train_idx]
-    y_train = y[:, train_idx]
-
-    x_val = x[:, val_idx]
-    y_val = y[:, val_idx]
-
-    # Define the model
-    model = create_model(layer_sizes, hidden_activation, output_activation)
-
-    # Define the loss function with L2 regularization
-    loss(x, y) =
-      Flux.Losses.mse(model(x), y) +
-      l2_lambda * sum(sum(abs2, w) for w in Flux.params(model))
-    #function loss(x, y)
-    #  l2_reg = sum(sum(abs2, params(layer)) for layer in model)
-    #  return Flux.Losses.mse(model(x), y) + l2_lambda * l2_reg
-    #end
-
-    train_data = Flux.DataLoader((x_train, y_train), batchsize=batch_size, shuffle=true)
-
-    # Set up the optimizer
-    optimizer = Descent(lr)
-
-    # Training loop
-    training_start = time_ns()
-    for _ = 1:epochs
-      for (x_batch, y_batch) in train_data
-        Flux.train!(loss, Flux.params(model), [(x_batch, y_batch)], optimizer)
-      end
-    end
-    training_times[i] = (time_ns() - training_start) / 1e9
-
-    # Validate the model
-    y_pred = model(x_val)
-
-    mse_scores[i] = Flux.Losses.mse(y_pred, y_val)
-    r2_scores[i] = r_squared(y_val, Float64.(y_pred))
-  end
-
-  return mse_scores, r2_scores, training_times
-end
-
-function network_scores(
-  model::String,
-  mse_scores::Union{Base.SkipMissing{Vector{Float64}},Vector{Float64}},
-  r2_scores::Union{Base.SkipMissing{Vector{Float64}},Vector{Float64}},
-  times::Vector{Float64},
-)
-  # Calculate means and standard deviations
-  mean_mse = mean(mse_scores)
-  std_mse = std(mse_scores)
-
-  mean_r2 = mean(r2_scores)
-  std_r2 = std(r2_scores)
-
-  mean_time = mean(times)
-  std_time = std(times)
-
-  return MyModelScore(model, (mean_mse, std_mse), (mean_r2, std_r2), (mean_time, std_time))
 end
 
 function grid_search(
@@ -225,11 +81,11 @@ function grid_search(
   epochs::Int=100,
   batch_size::Int=32,
   verbose::Bool=false,
-)::Tuple{Int,Vector{MyTuneScore}}
+)::Tuple{Int,Vector{RegressionScore}}
   best_score = Inf
   best_idx = nothing
 
-  results = Vector{MyTuneScore}()
+  results = Vector{RegressionScore}()
 
   for layer_sizes in hidden_layer_configs
     layer_sizes = [size(x, 2), layer_sizes..., size(y, 2)]
@@ -239,8 +95,8 @@ function grid_search(
           layer_sizes,
           model_functions.hidden_activation,
           model_functions.hidden_activation_prime,
-          model_functions.outputactivation,
-          model_functions.outputactivation_prime,
+          model_functions.output_activation,
+          model_functions.output_activation_prime,
           model_functions.cost,
           model_functions.cost_prime,
           ConstantLR(lr),
@@ -252,7 +108,7 @@ function grid_search(
         mean_score = (mean(mse_scores), std(mse_scores))
         r2_score = (mean(r2_scores), std(r2_scores))
         time_score = (mean(time_scores), std(time_scores))
-        scores = MyTuneScore(params, mean_score, r2_score, time_score)
+        scores = RegressionScore(params, mean_score, r2_score, time_score)
         push!(results, scores)
 
         if verbose
@@ -283,11 +139,11 @@ function random_search(
   epochs::Int=100,
   batch_size::Int=32,
   verbose::Bool=false,
-)::Tuple{Int,Vector{MyTuneScore}}
+)::Tuple{Int,Vector{RegressionScore}}
   best_score = Inf
   best_idx = nothing
 
-  results = Vector{MyTuneScore}()
+  results = Vector{RegressionScore}()
 
   for _ = 1:trials
     n_hidden_layers = rand(1:max_hidden_layers)
@@ -305,8 +161,8 @@ function random_search(
       layer_sizes,
       model_functions.hidden_activation,
       model_functions.hidden_activation_prime,
-      model_functions.outputactivation,
-      model_functions.outputactivation_prime,
+      model_functions.output_activation,
+      model_functions.output_activation_prime,
       model_functions.cost,
       model_functions.cost_prime,
       ConstantLR(lr),
@@ -317,7 +173,9 @@ function random_search(
     mean_score = (mean(mse_scores), std(mse_scores))
     r2_score = (mean(r2_scores), std(r2_scores))
     time_score = (mean(time_scores), std(time_scores))
-    scores = MyTuneScore(params, mean_score, r2_score, time_score)
+
+    params = Hyperparams(layer_sizes, lr, l2_lambda)
+    scores = RegressionScore(params, mean_score, r2_score, time_score)
     push!(results, scores)
 
     if mean_score[1] < best_score
@@ -332,11 +190,70 @@ function random_search(
   return best_idx, results
 end
 
+function random_search_classification(
+  x::Matrix{Float64},
+  y::Matrix{Float64},
+  model_functions::NetworkFunctions;
+  trials::Int=50,
+  max_hidden_layers::Int=3,
+  min_max_neurons_power::Tuple{Int,Int}=(2, 7),
+  min_max_lr::Tuple{Float64,Float64}=(0.0001, 0.1),
+  min_max_l2_lambda::Tuple{Float64,Float64}=(1e-6, 0.1),
+  k_folds::Int=5,
+  epochs::Int=100,
+  batch_size::Int=32,
+)::Tuple{Int,Vector{BinaryScore}}
+  best_score = -Inf
+  best_idx = nothing
+
+  results = Vector{BinaryScore}()
+
+  for _ = 1:trials
+    n_hidden_layers = rand(1:max_hidden_layers)
+    hidden_sizes = [
+      2^round(
+        Int,
+        exp(uniform(log(min_max_neurons_power[1]), log(min_max_neurons_power[2]))),
+      ) for _ = 1:n_hidden_layers
+    ]
+    layer_sizes = [size(x, 2), hidden_sizes..., size(y, 2)]
+    lr = exp(uniform(log(min_max_lr[1]), log(min_max_lr[2])))
+    l2_lambda = exp(uniform(log(min_max_l2_lambda[1]), log(min_max_l2_lambda[2])))
+
+    model = initialize_network(
+      layer_sizes,
+      model_functions.hidden_activation,
+      model_functions.hidden_activation_prime,
+      model_functions.output_activation,
+      model_functions.output_activation_prime,
+      model_functions.cost,
+      model_functions.cost_prime,
+      ConstantLR(lr),
+      l2_lambda,
+    )
+    accuracy_scores, time_scores =
+      evaluate_network_classification(x, y, model, k_folds, epochs, batch_size)
+    accuracy_score = (mean(accuracy_scores), std(accuracy_scores))
+    time_score = (mean(time_scores), std(time_scores))
+
+    params = Hyperparams(layer_sizes, lr, l2_lambda)
+    scores = BinaryScore(params, accuracy_score, time_score)
+    push!(results, scores)
+
+    if accuracy_score[1] > best_score
+      best_score = accuracy_score[1]
+      best_idx = length(results)
+    end
+  end
+
+  return best_idx, results
+end
+
 function uniform(a, b)
   return a + (b - a) * rand()
 end
 
-function visualize_architecture_tuning(results::Vector{MyTuneScore}; save_plots=true)
+function visualize_architecture_tuning(results::Vector{RegressionScore}; save_plots=true)
   results = sort(results, by=r -> (length(r.params.layer_sizes), sum(r.params.layer_sizes)))
 
   # Convert results to DataFrame for easier manipulation
@@ -351,9 +268,6 @@ function visualize_architecture_tuning(results::Vector{MyTuneScore}; save_plots=
     time=[r.time_mean_std[1] for r in results],
     time_std=[r.time_mean_std[2] for r in results],
   )
-
-  df.layers = map(x -> length(split(x, "-")), df.hidden_layers)
-  plots = []
 
   headers = OrderedDict{String,Union{Symbol,Tuple{Symbol,Symbol}}}(
     "Layers" => :hidden_layers,
@@ -384,6 +298,9 @@ $i. MSE: $(@sprintf("%.2e", sorted_df.mse[i])) ± $(@sprintf("%.2e", sorted_df.m
 
 """
   end
+
+  df.layers = map(x -> length(split(x, "-")), df.hidden_layers)
+  plots = []
 
   for l in unique(df.layers)
     filtered_df = df[df.layers.==l, :]
@@ -445,7 +362,122 @@ $i. MSE: $(@sprintf("%.2e", filtered_df.mse[i])) ± $(@sprintf("%.2e", filtered_
   if save_plots
     savefig(final_plot, "hyperparameter_tuning_architecture.pdf")
     # Save best results to text file
-    open("best_configurations.txt", "w") do io
+    open("best_regression_configurations.txt", "w") do io
+      write(io, best_results_text)
+    end
+  end
+
+  return final_plot, best_results_text
+end
+
+function visualize_architecture_tuning_classification(
+  results::Vector{BinaryScore};
+  save_plots=true,
+)
+  results = sort(results, by=r -> (length(r.params.layer_sizes), sum(r.params.layer_sizes)))
+
+  # Convert results to DataFrame for easier manipulation
+  df = DataFrame(
+    hidden_layers=[join(r.params.layer_sizes[2:end-1], "-") for r in results],
+    learning_rate=[r.params.lr for r in results],
+    l2_lambda=[r.params.l2_lambda for r in results],
+    accuracy=[r.accuracy_mean_std[1] for r in results],
+    accuracy_std=[r.accuracy_mean_std[2] for r in results],
+    time=[r.time_mean_std[1] for r in results],
+    time_std=[r.time_mean_std[2] for r in results],
+  )
+
+  headers = OrderedDict{String,Union{Symbol,Tuple{Symbol,Symbol}}}(
+    "Layers" => :hidden_layers,
+    "η" => :learning_rate,
+    "λ" => :l2_lambda,
+    "Accuracy" => (:accuracy, :accuracy_std),
+    "Time [s]" => (:time, :time_std),
+  )
+
+  sorted_df = sort(df, :accuracy, rev=true)
+  markdown_table = dataframe_to_markdown_table(first(sorted_df, 5), headers)
+
+  open("hyperparameter_tuning_table_classification.txt", "w") do io
+    write(io, markdown_table)
+  end
+
+  best_results_text = "Top 5 Configurations Overall\n"
+  for i = 1:min(5, size(sorted_df, 1))
+    best_results_text =
+      best_results_text * """
+$i. Accuracy: $(@sprintf("%.2e", sorted_df.accuracy[i])) ± $(@sprintf("%.2e", sorted_df.accuracy_std[i]))
+    Time: $(@sprintf("%.2e", sorted_df.time[i])) ± $(@sprintf("%.2e", sorted_df.time_std[i]))
+    Layers: $(sorted_df.hidden_layers[i])
+    LR: $(@sprintf("%.2e", sorted_df.learning_rate[i]))
+    L2: $(@sprintf("%.2e", sorted_df.l2_lambda[i]))
+
+"""
+  end
+
+  df.layers = map(x -> length(split(x, "-")), df.hidden_layers)
+  plots = []
+
+  for l in unique(df.layers)
+    filtered_df = df[df.layers.==l, :]
+    filtered_df = sort(filtered_df, :accuracy, rev=true)
+
+    best_results_text =
+      best_results_text * "Top 5 Configurations for $l $(l == 1 ? "Layer" : " Layers")\n"
+
+    for i = 1:min(5, size(filtered_df, 1))
+      best_results_text =
+        best_results_text * """
+$i. Accuracy: $(@sprintf("%.2e", filtered_df.accuracy[i])) ± $(@sprintf("%.2e", filtered_df.accuracy_std[i]))
+    Time: $(@sprintf("%.2e", filtered_df.time[i])) ± $(@sprintf("%.2e", filtered_df.time_std[i]))
+    Layers: $(filtered_df.hidden_layers[i])
+    LR: $(@sprintf("%.2e", filtered_df.learning_rate[i]))
+    L2: $(@sprintf("%.2e", filtered_df.l2_lambda[i]))
+"""
+    end
+
+    filtered_df.hidden_layers = pad_layers(filtered_df.hidden_layers)
+    filtered_df = sort(filtered_df, :hidden_layers)
+    tick_labels = sort(pad_layers(unique(filtered_df.hidden_layers)))
+
+    if length(tick_labels) > 40
+      step = ceil(Int, length(tick_labels) / 40)
+      xticks = (0.5:step:(length(tick_labels)-0.5), tick_labels[1:step:end])
+    else
+      xticks = (0.5:1:(length(tick_labels)-0.5), tick_labels)
+    end
+
+    plot_ = @df filtered_df boxplot(
+      :hidden_layers,
+      :accuracy,
+      fillalpha=0.75,
+      label="",
+      title="$(l) Hidden $(l == 1 ? "Layer" : " Layers")",
+      xlabel="Hidden Layer Sizes",
+      ylabel="Accuracy Score",
+      xticks=xticks,
+      x_rotation=90,
+      #color=:blue,
+      whisker_width=0.5,
+      size=(800, 500),
+    )
+
+    push!(plots, plot_)
+  end
+
+  layout = @layout [grid(length(plots), 1)]
+  final_plot = plot(
+    plots...,
+    layout=layout,
+    plot_title="Accuracy of Layer Architectures",
+    size=(800, 1200),
+    margin=5Plots.mm,
+  )
+
+  if save_plots
+    savefig(final_plot, "hyperparameter_tuning_architecture_classification.pdf")
+    # Save best results to text file
+    open("best_classification_configurations.txt", "w") do io
       write(io, best_results_text)
     end
   end
@@ -483,11 +515,11 @@ function dataframe_to_markdown_table(
     for (_, column) in headers
       if column isa Symbol
         value = row[column]
-        formatted_value = value isa Number ? "\\num{$(@sprintf("%.2e", value))}" : value
+        formatted_value = value isa Number ? "\$\\num{$(@sprintf("%.2e", value))}\$" : value
 
       elseif column isa Tuple{Symbol,Symbol}
         value1, value2 = row[column[1]], row[column[2]]
-        formatted_value = "\\num{$(@sprintf("%.2e", value1))} \\pm \\num{$(@sprintf("%.2e", value2))}"
+        formatted_value = "\$\\num{$(@sprintf("%.2e", value1))} \\pm \\num{$(@sprintf("%.2e", value2))}\$"
       end
 
       markdown_row = markdown_row * " $formatted_value |"

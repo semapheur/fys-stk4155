@@ -1,6 +1,6 @@
 include("./hypertuning.jl")
 include("./preprocessing.jl")
-include("./stats.jl")
+include("./score.jl")
 
 using LinearAlgebra
 
@@ -130,6 +130,42 @@ function lasso_regression(
   return β
 end
 
+mutable struct LogisticRegression
+  learning_rate::Float64
+  l2_lambda::Float64
+  num_iterations::Int
+  beta_logreg::Union{Nothing,Vector{Float64}}
+
+  function LogisticRegression(learning_rate, l2_lambda, num_iterations)
+    new(learning_rate, l2_lambda, num_iterations, nothing)
+  end
+end
+
+function train_logistic_regression!(model::LogisticRegression, X, y)
+  n_data, num_features = size(X)
+  model.beta_logreg = zeros(Float64, num_features)
+
+  for _ = 1:model.num_iterations
+    linear_model = X * model.beta_logreg
+    y_predicted = sigmoid.(linear_model)
+
+    # Gradient calculation with l2 regularization
+    gradient = (X' * (y_predicted - y)) / n_data .+ model.l2_lambda * model.beta_logreg
+
+    # Update beta_logreg
+    model.beta_logreg -= model.learning_rate * gradient
+  end
+end
+
+function predict_logistic_regression(
+  model::LogisticRegression,
+  X::Matrix{Float64},
+)::Vector{Float64}
+  linear_model = X * model.beta_logreg
+  y_predicted = sigmoid.(linear_model)
+  return [i >= 0.5 ? 1.0 : 0.0 for i in y_predicted]
+end
+
 function evaluate_regression_model(
   x::Matrix{Float64},
   y::Vector{Float64};
@@ -200,4 +236,37 @@ function regression_scores(
     (mean_r2[best_fit], std_r2[best_fit]),
     (mean_time[best_fit], std_time[best_fit]),
   )
+end
+
+function evaluate_logistic_model(
+  x::Matrix{Float64},
+  y::Vector{Float64};
+  logistic_model::LogisticRegression,
+  k_folds::Int=5,
+)
+  split = kfold_split(size(x, 1), k_folds, true)
+
+  accuracy = zeros(k_folds)
+  training_times = zeros(k_folds)
+
+  for k = 1:k_folds
+    train_idx, val_idx = get_fold(split, k)
+
+    x_train = x[train_idx, :]
+    y_train = y[train_idx]
+
+    x_val = x[val_idx, :]
+    y_val = y[val_idx]
+
+    # Train and test model 
+    training_start = time_ns()
+    train_logistic_regression!(logistic_model, x_train, y_train)
+    training_times[k] = (time_ns() - training_start) / 1e9
+
+    y_pred = predict_logistic_regression(logistic_model, x_val)
+
+    accuracy[k] = accuracy_score(y_pred, y_val)
+  end
+
+  return accuracy, training_times
 end

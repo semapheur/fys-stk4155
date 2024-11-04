@@ -1,4 +1,6 @@
 include("./learning_rate.jl")
+include("./preprocessing.jl")
+include("./score.jl")
 
 using Random
 
@@ -276,4 +278,202 @@ function predict(network::NeuralNetwork, input::Matrix{Float64})::Matrix{Float64
   end
 
   return activation
+end
+
+function evaluate_network(
+  x::Matrix{Float64},
+  y::Matrix{Float64},
+  model::NeuralNetwork,
+  k_folds::Int=5,
+  n_epochs::Int=100,
+  batch_size::Int=32,
+)
+  training_times = zeros(k_folds)
+  mse_scores = zeros(k_folds)
+  r2_scores = zeros(k_folds)
+  split = kfold_split(size(x, 1), k_folds, true)
+
+  for i = 1:k_folds
+    train_idx, val_idx = get_fold(split, i)
+
+    x_train = x[train_idx, :]
+    y_train = y[train_idx, :]
+
+    x_val = x[val_idx, :]
+    y_val = y[val_idx, :]
+
+    training_start = time_ns()
+    _ = train_network(model, x_train, y_train, n_epochs, batch_size, false)
+    training_times[i] = (time_ns() - training_start) / 1e9
+
+    y_pred = predict(model, x_val)
+    mse_scores[i] = mean((y_val - y_pred) .^ 2)
+    r2_scores[i] = r_squared(y_val, y_pred)
+  end
+
+  return skipmissing(mse_scores), skipmissing(r2_scores), training_times
+end
+
+function evaluate_network_classification(
+  x::Matrix{Float64},
+  y::Matrix{Float64},
+  model::NeuralNetwork,
+  k_folds::Int=5,
+  n_epochs::Int=100,
+  batch_size::Int=32,
+)
+  training_times = zeros(k_folds)
+  accuracy_scores = zeros(k_folds)
+  split = kfold_split(size(x, 1), k_folds, true)
+
+  for i = 1:k_folds
+    train_idx, val_idx = get_fold(split, i)
+
+    x_train = x[train_idx, :]
+    y_train = y[train_idx, :]
+
+    x_val = x[val_idx, :]
+    y_val = y[val_idx, :]
+
+    training_start = time_ns()
+    _ = train_network(model, x_train, y_train, n_epochs, batch_size, false)
+    training_times[i] = (time_ns() - training_start) / 1e9
+
+    y_pred = predict(model, x_val)
+    accuracy_scores[i] = accuracy_score(y_pred, y_val)
+  end
+
+  return skipmissing(accuracy_scores), training_times
+end
+
+# Slow to run, cannot figure out why
+function evaluate_flux(
+  x::Matrix{Float64},
+  y::Matrix{Float64},
+  layer_sizes::Vector{Int},
+  hidden_activation::Function,
+  output_activation::Union{Function,Nothing},
+  lr::Float64,
+  l2_lambda::Float64,
+  k_folds::Int,
+  epochs::Int,
+  batch_size::Int,
+)
+  function create_model(
+    layer_sizes::Vector{Int},
+    hidden_activation::Function,
+    output_activation::Union{Function,Nothing},
+  )
+    layers = []
+
+    # Create the hidden layers
+    for i = 1:(length(layer_sizes)-2)
+      push!(layers, Dense(layer_sizes[i], layer_sizes[i+1], hidden_activation))
+    end
+
+    # Create the output layer
+    if output_activation === nothing
+      push!(layers, Dense(layer_sizes[end-1], layer_sizes[end]))
+    else
+      push!(layers, Dense(layer_sizes[end-1], layer_sizes[end], output_activation))
+    end
+
+    # Create the Chain with the layers
+    return Chain(layers...)
+  end
+
+  training_times = zeros(k_folds)
+  mse_scores = zeros(k_folds)
+  r2_scores = zeros(k_folds)
+  split = kfold_split(size(x, 1), k_folds, true)
+
+  x = reshape(x, size(x, 2), size(x, 1)) # Flux expects features as row vectors
+  y = reshape(y, size(y, 2), size(y, 1))
+
+  for i = 1:k_folds
+    train_idx, val_idx = get_fold(split, i)
+
+    x_train = x[:, train_idx]
+    y_train = y[:, train_idx]
+
+    x_val = x[:, val_idx]
+    y_val = y[:, val_idx]
+
+    # Define the model
+    model = create_model(layer_sizes, hidden_activation, output_activation)
+
+    # Define the loss function with L2 regularization
+    sqnorm(x) = sum(abs2, x)
+    loss(x, y) = Flux.Losses.mse(model(x), y) + l2_lambda * sum(sqnorm, Flux.params(model))
+
+    train_data = Flux.DataLoader((x_train, y_train), batchsize=batch_size, shuffle=true)
+
+    # Set up the optimizer
+    optimizer = Descent(lr)
+
+    # Training loop
+    training_start = time_ns()
+    for _ = 1:epochs
+      Flux.train!(loss, Flux.params(model), train_data, optimizer)
+    end
+    training_times[i] = (time_ns() - training_start) / 1e9
+
+    y_pred = model(x_val)
+
+    mse_scores[i] = Flux.Losses.mse(y_pred, y_val)
+    r2_scores[i] = r_squared(y_val, Float64.(y_pred))
+  end
+
+  return mse_scores, r2_scores, training_times
+end
+
+struct RegressionModelScore
+  model::String
+  mse_mean_std::Tuple{Float64,Float64}
+  r2_mean_std::Tuple{Float64,Float64}
+  time_mean_std::Tuple{Float64,Float64}
+end
+
+struct BinaryModelScore
+  model::String
+  accuracy_mean_std::Tuple{Float64,Float64}
+  time_mean_std::Tuple{Float64,Float64}
+end
+
+function network_scores(
+  model::String,
+  mse_scores::Union{Base.SkipMissing{Vector{Float64}},Vector{Float64}},
+  r2_scores::Union{Base.SkipMissing{Vector{Float64}},Vector{Float64}},
+  times::Vector{Float64},
+)::RegressionModelScore
+  # Calculate means and standard deviations
+  mean_mse = mean(mse_scores)
+  std_mse = std(mse_scores)
+
+  mean_r2 = mean(r2_scores)
+  std_r2 = std(r2_scores)
+
+  mean_time = mean(times)
+  std_time = std(times)
+
+  return RegressionModelScore(
+    model,
+    (mean_mse, std_mse),
+    (mean_r2, std_r2),
+    (mean_time, std_time),
+  )
+end
+
+function network_scores(
+  model::String,
+  accuracy_scores::Union{Base.SkipMissing{Vector{Float64}},Vector{Float64}},
+  training_times::Vector{Float64},
+)::BinaryModelScore
+  mean_accuracy = mean(accuracy_scores)
+  std_accuracy = std(accuracy_scores)
+
+  mean_time = mean(training_times)
+  std_time = std(training_times)
+
+  return BinaryModelScore(model, (mean_accuracy, std_accuracy), (mean_time, std_time))
 end
