@@ -2,6 +2,8 @@
 title: Project 1
 authors:
   - name: Insert Name
+site:
+  template: article-theme
 exports:
   - format: pdf
     template: plain_latex
