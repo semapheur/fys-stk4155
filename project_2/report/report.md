@@ -1,5 +1,5 @@
 ---
-title: Project 1
+title: Project 2
 authors:
   - name: Insert Name
 site:
@@ -137,7 +137,7 @@ $$
 where $s_{t,j} = \sum_{i=1}^t g_{i,j}^2$ is the sum of the squared gradients and $\epsilon > 0$ is a small term to avoid dividing by zero. Equivalently, we can write the update in the vector form
 
 $$
-\label{equation-adagrad}
+\label{equation-adagrad-vector}
   \Delta\boldsymbol{\theta}_t = \eta_t \frac{1}{\sqrt{\mathbf{s}_t + \epsilon}}\mathbf{g}_t
 $$
 
@@ -155,7 +155,7 @@ $$
   \sqrt{s_{t,j}} \approx \operatorname{RMS}(\mathbf{g}_{1:t,j}) = \sqrt{\frac{1}{t}\sum_{\tau=1}^t g_{\tau,j}^2}
 $$
 
-The overall update of the RMSProp takes the same form as [](#equation-rmsprop).
+The overall update of the RMSProp takes the same form as [](#equation-adagrad).
 
 ### Adaptive moment estimation (ADAM)
 
@@ -215,7 +215,7 @@ where
 
 A feedforward neural network (FFNN) can be trained using stochastic gradient. To calculate the gradients for each layer iteratively, a technique called backpropagation can be used. Appendix [](#derivation-of-the-backpropagation-algorithm) outlines the derivation of the backpropagation algorithm, which can be explained in the following steps
 
-1. **Calculate the output error:** Firs determine the output error $\boldsymbol{\delta}^{(L+1)}$ using the gradient of the cost with respect to the activations:
+- **Calculate the output error:** First determine the output error $\boldsymbol{\delta}^{(L+1)}$ using the gradient of the cost with respect to the activations:
 
 $$
   \boldsymbol{\delta}^{(\ell)} = \nabla_{\mathbf{a}^{(\ell)}} C_n \odot \sigma'_{\ell} (\mathbf{z}^{(\ell)}),
@@ -223,13 +223,13 @@ $$
 
 where $\odot$ denotes the Hadamard (elementwise) product.
 
-2. **Backpropagate the errors:** For each layer $\ell = L,L-1,\dots,1$ calculate the error $\boldsymbol{\delta}^{(\ell)}$ using
+- **Backpropagate the errors:** For each layer $\ell = L,L-1,\dots,1$ calculate the error $\boldsymbol{\delta}^{(\ell)}$ using
 
 $$
   \boldsymbol{\delta}^{(\ell)} = (\mathbf{W}^{\ell + 1})^\top \boldsymbol{\delta}^{(\ell + 1)} \odot \boldsymbol{\sigma}'_{\ell} (\mathbf{z}^{(\ell)}).
 $$
 
-3. **Update weights and biases:** For each layer $\ell = L,L-1,\dots,1$ adjust the biases $\mathbf{b}^{(\ell)} = (b_j^{(ell)})_{j=1}^{n_\ell}$ and weights $\mathbf{W}^{(\ell)} = (w_{jk}^{(\ell)})_{j,k=1}^{n_{\ell-1}, n_{\ell}}$ according to the updates
+- **Update weights and biases:** For each layer $\ell = L,L-1,\dots,1$ adjust the biases $\mathbf{b}^{(\ell)} = (b_j^{(ell)})_{j=1}^{n_\ell}$ and weights $\mathbf{W}^{(\ell)} = (w_{jk}^{(\ell)})_{j,k=1}^{n_{\ell-1}, n_{\ell}}$ according to the updates
 
 $$
 \begin{align*}
@@ -245,33 +245,33 @@ where $\eta$ is the learning rate.
 Activation functions give artificial neural networks non-linear properties. Without them, a neural network is nothing more than a linear model, regardless of the depth. Additionally, activation functions restrict the outputs to specific ranges, which is essential depending on the application, such as for binary or multi-class classification tasks. 
 
 This project studies the following activation functions (see Figure [](#figure-activation_functions)):
-1. **Sigmoid function**: The sigmoid function $\sigma:\R\to (0,1)$, or the logistical function, is given by
+- **Sigmoid function**: The sigmoid function $\sigma:\R\to (0,1)$, or the logistical function, is given by
 
 $$
 \begin{align*}
-  \sigma(x) = \frac{1}{1 + e^{-x}} \\
-  \frac{\d}{\d x} \sigma(x) = \frac{e^{-x}}{(1 + e^{-x})^2} = \sigma(x) (1 - \sigma(x))
+  \sigma(x) =& \frac{1}{1 + e^{-x}} \\
+  \frac{\d}{\d x} \sigma(x) =& \frac{e^{-x}}{(1 + e^{-x})^2} = \sigma(x) (1 - \sigma(x))
 \end{align*}
 $$
 
 This a an "S"-shaped function that output values between $0$ and $1$, and is thus suitable for representing probability. The sigmoid function suffers from the vanishing gradient problem [@notes_smets_2024, pp. 22-23]. When a sigmoid activation is close to $0$ or $1$, the gradient becomes very small due to its assymptotic behaviour. This leads to ineffective weight updates during backpropagation. 
 
-2. **Rectified linear unit (ReLU)**: The ReLU function $\operatorname{ReLU}:\R \to [0,\infty)$ is given by
+- **Rectified linear unit (ReLU)**: The ReLU function $\operatorname{ReLU}:\R \to [0,\infty)$ is given by
 
 $$
 \begin{align*}
-  \operatorname{ReLU}(x) := \max\set{0,x} \\
-  \frac{\d}{\d x}\operatorname{ReLU} = \begin{cases} 1,\quad x >& 0 \\ 0,\quad x <& 0 \end{cases}
+  \operatorname{ReLU}(x) :=& \max\set{0,x} \\
+  \frac{\d}{\d x}\operatorname{ReLU} =& \begin{cases} 1,\quad x >& 0 \\ 0,\quad x <& 0 \end{cases}
 \end{align*}
 $$
 
 The derivative of the ReLU behaves similarly to the Heaviside step function (although they are not technically identical). This property helps mitigate the vanishing gradient problem, as the derivative remains constant for positive activations, allowing gradients to propagate effectively during training. On the other hand, ReLU can lead "dying" neurons. When the input is negative, the derivative is zero, effectively deactivating the neuron. This inactivation causes the gradients of the upstream neurens to vanish [@notes_smets_2024, pp. 22-23]. 
 
-1. **Leaky rectified linear unit (LRelu)**: The leaky ReLU function $\operatorname{LReLU}:\R\times\R \to\R$ is given by
+- **Leaky rectified linear unit (LRelu)**: The leaky ReLU function $\operatorname{LReLU}:\R\times\R \to\R$ is given by
    
 $$
-  \operatorname{LReLU}(x,\alpha) := \max\set{\alpha x, x} \\
-  \frac{\d}{\d x}\operatorname{LReLU}(x, \alpha) = \begin{cases} 1,\quad x >& 0 \\ \alpha,\quad x <& 0 \end{cases}
+  \operatorname{LReLU}(x,\alpha) :=& \max\set{\alpha x, x} \\
+  \frac{\d}{\d x}\operatorname{LReLU}(x, \alpha) =& \begin{cases} 1,\quad x >& 0 \\ \alpha,\quad x <& 0 \end{cases}
 $$
 
 The leaky ReLU differs from the ordinary ReLU by introducing a small slope for negative values. This addresses the problem of "dying neurons" affecting the ReLU. This modification allows the function to maintain a small gradient for negative inputs, enabling the neuron to continue learning even when it receives negative activations.
@@ -297,10 +297,9 @@ The tuning process employed a random grid search with the following parameters:
 - Regularization parameter: $\lambda \sim \operatorname{Uniform}(\num{1e-6}, 0.1)$
 - Momentum parameter: $\gamma \sim\operatorname{Uniform}(\num{1e-6}, 0.1)$
 
-The top performing models are generally of lower polynomial degree, which may suggest potential numerical instability in the momentum-based gradient descent algorithm used for training the models (see [](#momentum-based-gradient-descent-for-linear-regression) for source code). additionally, the most effective models generally favor small learning rates on the order of $\num{1e−4}$. The regularization parameters are also generally small, but tend to fluctuate more.
+The top performing models are generally of lower polynomial degree, which may suggest potential numerical instability in the momentum-based gradient descent algorithm used for training the models (see [](#code-gdm-linreg) for source code). additionally, the most effective models generally favor small learning rates on the order of $\num{1e−4}$. The regularization parameters are also generally small, but tend to fluctuate more.
 
-:::{table} 
-Top ten performing results from hyperparameter tuning of a ridge regression model using random grid search. The learning rate is denoted by $\eta$, the regularization parameter is denoted by $\lambda$, and the momentum parameter is denoted by $\gamma$.
+:::{table} Top ten performing results from hyperparameter tuning of a ridge regression model using random grid search. The learning rate is denoted by $\eta$, the regularization parameter is denoted by $\lambda$, and the momentum parameter is denoted by $\gamma$.
 :label: table-ridge-regression-franke-hypertuning
 :align: center
 
@@ -336,10 +335,9 @@ The FFNN models were trained on $1,000$ samples using $5$-fold cross-validation,
 
 Figure [](#figure-ffnn_regression_franke_hypertuning_architecture) shows the mean squared error for various hidden layer architectures resulting from the random grid search. Overall, there are no clear trends in the performance of the FFNN models based on the number of hidden layers and neurons within each layer. This lack of discernible patterns may be partly attributed to the experimental design, as the chosen epoch size of $100$ may be insufficient for deeper FFNNs with an increasing number of neurons. Models with three hidden layers generally performed worse, suggesting a potential for overfitting; the added complexity of three layers may not be warranted for this regression task.
 
-Table [](table-ffnn-regression-franke-hypertuning-architecture) lists the score metrics for the top five performing FFNN regression models. The best model featured hidden layers of $[128, 8]$, with a learning rate of $\eta = \num{7.95e-02}$ and an $\ell_2$ regularization parameter of $\lambda = \num{4.42e-05}$. In general, the top-performing models across different depths exhibited learning rates on the order of $10^{-2}$ and regularization parameters in the range of $10^{-6}$ to $10^{-4}$
+Table [](#table-ffnn-regression-franke-hypertuning-architecture) lists the score metrics for the top five performing FFNN regression models. The best model featured hidden layers of $[128, 8]$, with a learning rate of $\eta = \num{7.95e-02}$ and an $\ell_2$ regularization parameter of $\lambda = \num{4.42e-05}$. In general, the top-performing models across different depths exhibited learning rates on the order of $10^{-2}$ and regularization parameters in the range of $10^{-6}$ to $10^{-4}$
 
 :::{table} Performance scores for the top five feedforward neural network models obtained from a random grid search parameter tuning. Here $\eta$ denotes the learning rate, and $\lambda$ denotes the $\ell_2$ regularization parameter.
-
 :label: table-ffnn-regression-franke-hypertuning-architecture
 :align: center
 
@@ -373,8 +371,7 @@ In contrast, both ordinary least squares (OLS) and ridge regression models demon
 
 The FFNNs implemented using the Flux.jl package performed significantly worse compared to our custom FFNN models, coupled with a substantially higher computational cost. Despite using identical training parameters for both models, the underlying reasons for this discrepancy in performance remain unclear. At the time of writing, the Flux.jl package documentation lacks comprehensive examples aimed at optimizing computational performance for such regression, often requiring a deep dive into the source code for further insights.
 
-:::{table} Performance comparison of feedforward neural networks (FFNNs) on a regression task using different hidden activation functions. The models were configured with a layer architecture of $[2,32,16,1]$, a learning rate of $\eta = 0.05$, and a regularization parameter of $\lambda = \num{1e−5}$. Additionally, these models were trained on $1,000$ samples generated by the Franke function, employing $10-fold cross-validation with $1,000$ epochs and a batch size of $32$. The results are benchmarked against polynomial ordinary least squares (OLS) and ridge regression models, with the OLS model featuring a polynomial degree of $14$ and the ridge model having a polynomial degree of $15$, and regularization parameter $\lambda = \num{1e-5}$. Additionally, the result are compared with FFNNs implemented using the [Flux.jl](https://fluxml.ai/Flux.jl/stable/) package in Julia.
-
+:::{table} Performance comparison of feedforward neural networks (FFNNs) on a regression task using different hidden activation functions. The models were configured with a layer architecture of $[2,32,16,1]$, a learning rate of $\eta = 0.05$, and a regularization parameter of $\lambda = \num{1e−5}$. Additionally, these models were trained on $1,000$ samples generated by the Franke function, employing $10$-fold cross-validation with $1,000$ epochs and a batch size of $32$. The results are benchmarked against polynomial ordinary least squares (OLS) and ridge regression models, with the OLS model featuring a polynomial degree of $14$ and the ridge model having a polynomial degree of $15$, and regularization parameter $\lambda = \num{1e-5}$. Additionally, the result are compared with FFNNs implemented using the [Flux.jl](https://fluxml.ai/Flux.jl/stable/) package in Julia.
 :label: table-ffnn-regression-franke-comparison
 :align: center
 
@@ -404,12 +401,11 @@ As for the regression case, we also conducted parameter FFNN binary classificati
 - Number of hidden layers: $L \sim \operatorname{Uniform}(1, 3)$
 - Number of neurons (in powers of $2$): $2^{n_L}, n_L \sim \operatorname{Uniform}(2, 7)$
 
-Figure [](#figure-table-ffnn-classification-wbcd-hypertuning-architecture) shows the accuracy score for various hidden layer architectures obtained from the random grid search. There are no strong trends observed in the scores relative to the number of hidden layers or neurons. Generally, the single-layer models beformed slightly better the two- and three-layer models. Notably, the accuracy scores for the three-layer models tend to plateau around an accuracy of approximately $0.63$. This trend is prevalent across most configurations of neurons, indicating that the three-layer models may be experiencing saturation in their learning process. This plateau could be attributed to the use of the sigmoid activation function, which is known to be prone to vanishing gradients.
+Figure [](#figure-ffnn_classification_wbcd_hypertuning_architecture) shows the accuracy score for various hidden layer architectures obtained from the random grid search. There are no strong trends observed in the scores relative to the number of hidden layers or neurons. Generally, the single-layer models beformed slightly better the two- and three-layer models. Notably, the accuracy scores for the three-layer models tend to plateau around an accuracy of approximately $0.63$. This trend is prevalent across most configurations of neurons, indicating that the three-layer models may be experiencing saturation in their learning process. This plateau could be attributed to the use of the sigmoid activation function, which is known to be prone to vanishing gradients.
 
-Table [](table-ffnn-classification-wbcd-hypertuning-architecture) lists the score metrics for the top five performing FFNN classification models. The best model featured hidden layers of $[128, 8]$, with a learning rate of $\eta = \num{6.16e-02}$ and an $\ell_2$ regularization parameter of $\lambda = \num{2.00e-06}$. The second-best model achieved slightly lower accuracy but required significantly less computational time. This illustrates a trade-off between model complexity and computational efficiency. The models with fewer layers (such as the single-layer configuration with 4 neurons) exhibited comparable accuracy, indicating that while deeper architectures can enhance performance, they may not always yield substantial gains over simpler configurations.
+Table [](#table-ffnn-classification-wbcd-hypertuning-architecture) lists the score metrics for the top five performing FFNN classification models. The best model featured hidden layers of $[128, 8]$, with a learning rate of $\eta = \num{6.16e-02}$ and an $\ell_2$ regularization parameter of $\lambda = \num{2.00e-06}$. The second-best model achieved slightly lower accuracy but required significantly less computational time. This illustrates a trade-off between model complexity and computational efficiency. The models with fewer layers (such as the single-layer configuration with 4 neurons) exhibited comparable accuracy, indicating that while deeper architectures can enhance performance, they may not always yield substantial gains over simpler configurations.
 
 :::{table} Accuracy scores and computational time for the top five feedforward neural network models obtained from a random grid search parameter tuning on the [Wisconsin breast cancer data](https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic). Here $\eta$ denotes the learning rate, and $\lambda$ denotes the $\ell_2$ regularization parameter.
-
 :label: table-ffnn-classification-wbcd-hypertuning-architecture
 :align: center
 
@@ -438,8 +434,7 @@ Consistent with the regression findings, the FFNN models using the ReLU and leak
 
 The logistic model performed comparatively to the ReLU and LReLU models, , but it achieved this with significantly lower computational time. This finding underscores the efficiency of logistic regression in balancing performance and computational cost, especially in simpler classification tasks.
 
-:::{table} Performance comparison of feedforward neural networks (FFNNs) on a binary classification task using different hidden activation functions. The models were configured with a layer architecture of $[2,32,16,1]$, a learning rate of $\eta = 0.05$, and a regularization parameter of $\lambda = \num{1e−5}$. Additionally, these models were trained on the [Wisconsin breast cancer data](https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic), employing $10-fold cross-validation with $1,000$ epochs and a batch size of $32$. The results are benchmarked against a logistical regression model with learning rate $\eta = 0.05$ and $\ell_2$ regularization parameter $\lambda = \num{1e-5}$.
-
+:::{table} Performance comparison of feedforward neural networks (FFNNs) on a binary classification task using different hidden activation functions. The models were configured with a layer architecture of $[2,32,16,1]$, a learning rate of $\eta = 0.05$, and a regularization parameter of $\lambda = \num{1e−5}$. Additionally, these models were trained on the [Wisconsin breast cancer data](https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic), employing $10$-fold cross-validation with $1,000$ epochs and a batch size of $32$. The results are benchmarked against a logistical regression model with learning rate $\eta = 0.05$ and $\ell_2$ regularization parameter $\lambda = \num{1e-5}$.
 :label: table-ffnn-classification-wbcd-comparison
 :align: center
 
@@ -488,7 +483,7 @@ $$
 where $\mathbf{W}^{(\ell)} \in\mathbb{F}^{n_\ell \times n_{\ell-1}}$ and $\mathbf{b}^{(\ell)} \in\mathbb{F}^{n_\ell}$ for $\ell\in\set{1,\dots,L+1}$. The FFNN is then represented by the composition $\mathcal{F}: \mathbb{F}^{n_0} \to \mathbb{F}^{n_{L+1}}$ given by
 
 $$
-  \mathcal{F} := \boldsymbol{\sigma}_{L+1} \circ \F_{L+1} \circ \boldsymbol{\sigma}_{L} \circ F_L \circ\cdots\circ \boldsymbol{\sigma}_1 \circ F_1.
+  \mathcal{F} := \boldsymbol{\sigma}_{L+1} \circ F_{L+1} \circ \boldsymbol{\sigma}_{L} \circ F_L \circ\cdots\circ \boldsymbol{\sigma}_1 \circ F_1.
 $$
 
 In a forward pass from layer $\ell - 1$ to $\ell$, the affine transformation $F_\ell$ produces weighted pre-activation $\mathbf{z}^{(\ell)} \in \mathbb{F}^{n_\ell}$ given by
@@ -530,9 +525,9 @@ $$
 To derive the backpropagation equations, we need to calculate the partial derivatives of $C_n$ with respect to the bias and the weights. From [](#equation-neuron-activation), we obtain the partial derivatives
 
 $$
-  \frac{\partial z_j^{(\ell)}}{\partial w_{kj}^{(\ell)}} =& a_k^{(\ell - 1)},\quad
-  \frac{\partial z_j^{(\ell)}}{\partial b_j^{(\ell)}} =& 1,\quad
-  \frac{\partial a_j^{(\ell)}}{\partial z_j^{(\ell)}} =& \sigma'_{\ell}(\mathbf{z}_j^{\ell})
+  \frac{\partial z_j^{(\ell)}}{\partial w_{kj}^{(\ell)}} = a_k^{(\ell - 1)},\quad
+  \frac{\partial z_j^{(\ell)}}{\partial b_j^{(\ell)}} = 1,\quad
+  \frac{\partial a_j^{(\ell)}}{\partial z_j^{(\ell)}} = \sigma'_{\ell}(\mathbf{z}_j^{\ell})
 $$
 
 We also define the error $\delta_j^{(\ell)}$ for neuron $j$ in layer $\ell$ by 
@@ -580,34 +575,23 @@ $$
   \frac{\partial C_n}{\partial b_j^{(\ell)}} = \frac{\partial z_j^{(\ell)}}{\partial b_j^{(\ell)}} \underbrace{\frac{\partial a_j^{(\ell)}}{\partial z_j^{(\ell)}} \frac{\partial C_n}{\partial a_j^{\ell}}}_{=\delta_j^{(\ell)}} = \delta_j^{(\ell)}
 $$
 
-The backpropagation algorithm can be summed up as follows.
-
-:::{prf:algorithm} Backpropagation Algorithm
-:label: algorithm-backpropagation
-
+The backpropagation algorithm can be summed up as follows:
 1. **Find the output error:** Calculate the output error $\boldsymbol{\delta}^{(L+1)}$ using the gradient of the cost with respect to the activations:
-
 $$
   \boldsymbol{\delta}^{(\ell)} = \nabla_{\mathbf{a}^{(\ell)}} C_n \odot \sigma'_{\ell} (\mathbf{z}^{(\ell)}).
 $$
-
 2. **Backpropagate the errors:** For each layer $\ell = L,L-1,\dots,1$ calculate the error $\boldsymbol{\delta}^{(\ell)}$ using
-
 $$
   \boldsymbol{\delta}^{(\ell)} = (\mathbf{W}^{\ell + 1})^\top \boldsymbol{\delta}^{(\ell + 1)} \odot \boldsymbol{\sigma}'_{\ell} (\mathbf{z}^{(\ell)}).
 $$
-
 3. **Update weights and biases:** For each layer $\ell = L,L-1,\dots,1$ adjust the biases $\mathbf{b}^{(\ell)}$ and weights $\mathbf{W}^{(\ell)}$ according to the updates
-
 $$
 \begin{align*}
   \hat{w}_{jk}^{(\ell)} =& w_{jk}^{(\ell)} - \eta \delta_j^{(\ell)} a_k^{(\ell - 1)} \\
   \hat{b}_j^{(\ell)} =& b_j^{(\ell)} - \eta \delta_j^{(\ell)},
 \end{align*}
 $$
-
 where $\eta$ is the learning rate.
-:::
 
 ## Franke's Function
 
@@ -635,10 +619,8 @@ Plot of the Franke function on the unit square $[0,1]^2$.
 
 ## Source Code
 
-### Momentum-based Gradient Descent for Linear Regression
-
 ```{code} julia
-:label: code-ffnn
+:label: code-gdm-linreg
 :caption: Julia implementation of gradient descent for linear regression models using momentum.
 
 """
@@ -693,9 +675,6 @@ function linreg_gradient_descent_momentum(
 end
 ```
 
-### Feedforward Neural Network
-
-
 ```{code} julia
 :label: code-ffnn
 :caption: Feedforward neural network implementation in Julia.
@@ -739,10 +718,8 @@ struct NeuralNetwork
 end
 ```
 
-#### Neural Network Constructor
-
 ```{code} julia
-:label: code-ffnn
+:label: code-ffnn-constructor
 :caption: Julia FFNN constructor.
 
 """
@@ -799,10 +776,8 @@ function initialize_network(
 end
 ```
 
-#### Forward Pass
-
 ```{code} julia
-:label: code-ffnn
+:label: code-ffnn-forwardpass
 :caption: Neural forward pass implementation in Julia.
 
 """
@@ -834,10 +809,8 @@ function feedforward(
 end
 ```
 
-#### Backpropgation Algorithm
-
 ```{code} julia
-:label: code-logreg
+:label: code-backpropagation
 :caption: Backpropagation implementation in Julia.
 
 """
@@ -893,11 +866,8 @@ function backpropagate(
 end
 ```
 
-#### Stochastic Gradient Descent Training
-
-
 ```{code} julia
-:label: code-logreg
+:label: code-ffnn-sgd
 :caption: Julia implementation of FFNN training using stochastic gradient descent.
 
 """
@@ -973,8 +943,6 @@ function train_network(
   return losses
 end
 ```
-
-### Logistic Regression
 
 ```{code} julia
 :label: code-logreg

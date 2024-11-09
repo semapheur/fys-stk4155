@@ -1,0 +1,75 @@
+[# if options.draft #]
+\documentclass[draft]{article}
+[# else #]
+\documentclass{article}
+[# endif #]
+
+\usepackage[
+    protrusion=true,
+    activate={true,nocompatibility},
+    final,
+    tracking=true,
+    kerning=true,
+    spacing=true,
+    factor=1100]{microtype}
+\SetTracking{encoding={*}, shape=sc}{40}
+
+\usepackage[dvipsnames]{xcolor}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codepurple},
+    keywordstyle=\color{NavyBlue},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize\bfseries,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=t,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}% -- Setting up the custom style:
+\lstset{style=mystyle}
+
+
+% abbrv|acm|alpha|apalike|ieeetr|plain|siam|unsrt
+% natbib: dinat|plainnat|abbrvnat|unsrtnat|rusnat|ksfh_nat
+\bibliographystyle{[-options.citationstyle-]}
+
+[- IMPORTS -]
+
+% colors for hyperlinks
+\hypersetup{colorlinks=true, allcolors=blue}
+
+\title{[-doc.title-]}
+
+\begin{document}
+
+\maketitle
+\author{[-doc.authors|join(" \\and ", "name")-]}
+
+[# if parts.abstract #]
+\begin{abstract}
+  [-parts.abstract-]
+\end{abstract}
+[# endif #]
+
+[# if options.showtoc #]
+\tableofcontents
+[# endif #]
+
+[-CONTENT-]
+
+[# if doc.bibliography #]
+\bibliography{[- doc.bibliography | join(", ") -]}
+[# endif #]
+
+\end{document}
