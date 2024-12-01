@@ -1,15 +1,18 @@
 ---
-title: Project 1
+title: Linear Regression
+subtitle: FYS-STK4155 - Project 1
 authors:
   - name: Insert Name
 site:
   template: article-theme
 exports:
   - format: pdf
-    template: plain_latex
+    template: ../report_template
     output: report.pdf
+    showtoc: true
 math:
   # Note the 'single quotes'
+  '\argmin': '\arg\min'
   '\R': '\mathbb{R}'
   '\Set': '{\left\{ #1 \right\}}'
 bibliography: references.bib
@@ -113,10 +116,10 @@ where $\lVert \mathbf{x} \rVert_2 = \left(\sum_{i=1}^n x_i^2 \right)^{1/2} = \sq
 To find the MLE of $\boldsymbol{\beta}$, we need to solve the maximization problem
 
 $$
-  \hat{\boldsymbol{\beta}} = \arg\max_{\boldsymbol{\beta}} L(\boldsymbol{\beta}, \sigma^2) \iff \hat{\boldsymbol{\beta}} = \arg\max_{\boldsymbol{\beta}} ln[L(\boldsymbol{\beta}, \sigma^2)],
+  \hat{\boldsymbol{\beta}} = \arg\max_{\boldsymbol{\beta}} L(\boldsymbol{\beta}, \sigma^2) \iff \hat{\boldsymbol{\beta}} = \arg\max_{\boldsymbol{\beta}} \ln[L(\boldsymbol{\beta}, \sigma^2)],
 $$
 
-where the equivalence of follows from the strict monotonicity of the natural logarithm. Since only the residual sum of squares term of [](#equation-5) depends on $\boldsymbol{\beta}$, this is equivalent to minimizing the cost function
+where the equivalence follows from the strict monotonicity of the natural logarithm. Since only the residual sum of squares term of [](#equation-5) depends on $\boldsymbol{\beta}$, this is equivalent to minimizing the cost function
 
 $$
   \label{equation-6}
@@ -594,11 +597,11 @@ Mean squared error (MSE) and $R^2$ scores for polynomial OLS, ridge and lasso re
 :label: table-1
 :align: center
 
-| Metric | OLS | Ridge ($\lambda=100$) | Lasso ($\lambda=1$) |
-| --- | :---: | :---: | :---: |
-| Polynomial degree | $5$ | $7$ | $3$ |
-| $\mathrm{MSE}$ | $\num{1.87e-02} \pm \num{8.65e-03}$ | $\num{4.30e-02} \pm \num{2.34e-02}$ | $\num{2.36e-02} \pm \num{1.63e-02}$ |
-| $R^2$ | $\num{6.79e-01} \pm \num{2.56e-01}$ | $\num{4.40e-01} \pm \num{2.58e-01}$ | $\num{6.58e-01} \pm \num{2.11e-01}$ |
+| Model | Degree | MSE | $R^2$ |
+| --- | :-: | :-: | :-: |
+| OLS | $5$ | $\num{1.87e-02} \pm \num{8.65e-03}$ | $\num{6.79e-01} \pm \num{2.56e-01}$ |
+| Ridge ($\lambda=100$) | $7$ | $\num{4.30e-02} \pm \num{2.34e-02}$ | $\num{4.40e-01} \pm \num{2.58e-01}$ |
+| Lasso ($\lambda=1$) | $3$ | $\num{2.36e-02} \pm \num{1.63e-02}$ | $\num{6.58e-01} \pm \num{2.11e-01}$ |
 :::
 
 ## Polynomial Regression of Digital Elevation Data
@@ -630,12 +633,12 @@ As observed with the Franke-generated data, each regression method reaches its o
 :::{table} Performance evaluation of polynomial ordinary least squares (OLS), ridge regression, and lasso regression, based on $100$ samples of digital terrain data. The evaluation was conducted using $10$-fold cross-validation. Mean squared errors (MSE) and $R^2$ values are presented along with their standard deviations.
 :label: table-2
 :align: center
-
-| Metric | OLS | Ridge ($\lambda=100$) | Lasso ($\lambda=1,000$) |
-| --- | :---: | :---: | :---: |
-| Polynomial degree | $2$ | $3$ | $7$ |
-| $\mathrm{MSE}$ | $\num{4.73e+04} \pm \num{1.86e+04}$ | $\num{1.41e+05} \pm \num{5.64e+04}$ | $\num{4.63e+04} \pm \num{1.37e+04}$ |
-| $R^2$ | $\num{3.83e-01} \pm \num{2.95e-01}$ | $\num{-9.36e-01} \pm \num{1.28e+00}$ | $\num{3.77e-01} \pm \num{2.29e-01}$ |
+ 
+| Model | Degree | MSE | $R^2$ |
+| --- | :-: | :-: | :-: |
+| OLS | $2$ | $\num{4.73e+04} \pm \num{1.86e+04}$ | $\num{3.83e-01} \pm \num{2.95e-01}$ |
+| Ridge ($\lambda=100$) | $3$ | $\num{1.41e+05} \pm \num{5.64e+04}$ | $\num{-9.36e-01} \pm \num{1.28e+00}$ |
+| Lasso ($\lambda=1,000$) | $7$ | $\num{4.63e+04} \pm \num{1.37e+04}$ | $\num{3.77e-01} \pm \num{2.29e-01}$ |
 :::
 
 ### Bias variance tradeoff
@@ -756,7 +759,7 @@ end
 ### Lasso Regression
 ```{code} julia
 :label: code-3
-:caption: Lasso regression in Julia. Created with aide from Claude 3.5 Sonnet.
+:caption: Lasso regression in Julia. Created with aid from [Claude 3.5 Sonnet](https://claude.ai/).
 
 """
 LASSO regression
@@ -835,7 +838,7 @@ end
 :align: center
 
 | Coefficient | Monomial |
-| :---: | :---: |
+| :-: | :-: |
 | $\beta_0$ | $1$ |
 | $\beta_1$ | $x_2^1$ |
 | $\beta_2$ | $x_1^1$ |

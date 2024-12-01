@@ -6,4 +6,4 @@ build
 **/*.aux
 **/*.log
 **/*.synctex.gz
-**/*.pdf
+**/*.toc

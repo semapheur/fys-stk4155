@@ -1,20 +1,31 @@
-[# if options.draft #]
-\documentclass[draft]{article}
-[# else #]
-\documentclass{article}
-[# endif #]
+\documentclass[
+  a4paper,
+  [-options.basefont-],
+  [# if options.twocolumn #] twocolumn, [# endif #]
+  [# if options.draft #] draft, [# endif #]
+]{article}
 
-\usepackage[
-    protrusion=true,
-    activate={true,nocompatibility},
-    final,
-    tracking=true,
-    kerning=true,
-    spacing=true,
-    factor=1100]{microtype}
-\SetTracking{encoding={*}, shape=sc}{40}
-
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{authblk}
+\usepackage{booktabs}
+\usepackage[labelfont=bf, skip=5pt, font=small]{caption}
+\usepackage{datetime}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{natbib}
+\usepackage{siunitx}
 \usepackage[dvipsnames]{xcolor}
+
+[-IMPORTS-]
+
+% abbrv|acm|alpha|apalike|ieeetr|plain|siam|unsrt
+% natbib: dinat|plainnat|abbrvnat|unsrtnat|rusnat|ksfh_nat
+\bibliographystyle{[-options.citationstyle-]}
+
+%\renewenvironment{verbatim}{\begin{lstlisting}}{\end{lstlisting}}
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
 \definecolor{codepurple}{rgb}{0.58,0,0.82}
@@ -36,30 +47,41 @@
     showstringspaces=false,
     showtabs=false,                  
     tabsize=2
-}% -- Setting up the custom style:
+}
 \lstset{style=mystyle}
 
+%\titleformat{\title}[block]{}{ \bfseries \LARGE}{}{}
+%\titlespacing*{\title}{0pt}{0pt}{0pt}
 
-% abbrv|acm|alpha|apalike|ieeetr|plain|siam|unsrt
-% natbib: dinat|plainnat|abbrvnat|unsrtnat|rusnat|ksfh_nat
-\bibliographystyle{[-options.citationstyle-]}
-
-[- IMPORTS -]
+\setlength{\parskip}{1em}
+\setlength{\parindent}{0pt}
 
 % colors for hyperlinks
 \hypersetup{colorlinks=true, allcolors=blue}
 
-\title{[-doc.title-]}
+% date format
+\renewcommand{\dateseparator}{-}
+
+\title{\vspace{-2.5cm} 
+  [-doc.title-] 
+  [# if doc.subtitle #] 
+    \\[0.5em] \large [-doc.subtitle-] 
+  [# endif #]
+}
+\author{[-doc.authors|join(" \\and ", "name")-]}
+\affil{[-doc.authors|join(" \\and ", "affiliation")-]}
+\date{\yyyymmdddate\today}
 
 \begin{document}
 
 \maketitle
-\author{[-doc.authors|join(" \\and ", "name")-]}
 
 [# if parts.abstract #]
+\rule{\textwidth}{0.5pt}
 \begin{abstract}
-  [-parts.abstract-]
+  \noindent [-parts.abstract-]
 \end{abstract}
+\rule{\textwidth}{0.5pt}
 [# endif #]
 
 [# if options.showtoc #]
