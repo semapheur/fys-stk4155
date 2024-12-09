@@ -1,5 +1,5 @@
 ---
-title: Solving the One-Dimensional Diffusion Equation using Neural Networks
+title: Solving the One-Dimensional Diffusion Equation using Feedforward Neural Networks
 subtitle: FYS-STK4155 - Project 3
 authors:
   - name: Insert Name
@@ -19,7 +19,7 @@ math:
   '\Set': '{\left\{ #1 \right\}}'
 bibliography: references.bib
 abstract: |
-  This project studies the use of feedforward neural networks (FFNN) to solve the one-dimensional heat equation with Dirichlet boundary conditions. Through hyperparameter tuning using grid search, it was found that FFNN models with three hidden layers and trained converged sufficiently to the exact solution. Among various activation functions, the Sigmoid Linear Unit (SiLU) provided the best performance, followed by the tanh function, which offered a lower computational cost. The stability of the FFNN model was compared to the explicit forward Euler scheme with a step size of $\Delta x = 0.1$, and it was found to perform similarly, although with a more irregular error distribution. To improve the convergence of the FFNN model, training on additional points or the application of more advanced optimization techniques may be necessary. This work demonstrates the potential of neural networks for solving differential equations, especially in dynamic systems, while acknowledging challenges related to training stability and computational efficiency.
+  This project studies the use of feedforward neural networks (FFNN) to solve the one-dimensional heat equation with Dirichlet boundary conditions. Through hyperparameter tuning using grid search, it was found that FFNN models with three hidden layers converged effectively to the exact solution. Among various activation functions, the Sigmoid Linear Unit (SiLU) provided the best performance, followed by the tanh function, which offered a lower computational cost. The stability of the FFNN model was compared to the explicit forward Euler scheme, and it was found to perform similarly to an Euler model with $\Delta x = 0.1$, although with a more irregular error distribution. To improve the convergence of the FFNN model, training on additional points or the application of more advanced optimization techniques may be necessary. This work demonstrates the potential of neural networks for solving differential equations, especially in dynamic systems, while acknowledging challenges related to training stability and computational efficiency.
 ---
 
 # Introduction
@@ -57,12 +57,12 @@ where $\phi(x):[0,\ell]\to\R$ represents the inital heat distribution. We also a
 
 $$
 \label{equation:1d-diffusion-boundary-conditions}
-  u(0, t) = 0, \quad u(\ell, t) = 0, \quad t \geq 0.
+  u(0, t) = u(\ell, t) = 0, \quad t \geq 0.
 $$
 
 ### Analytical Solution
 
-To solve the heat equation analytically, we observe that both the diffusion equation [](#equation:1d-diffusion) and the boundary conditions [](#equation:1d-diffusion-boundary-conditions) are linear and homogenous. This allows us to solve the equation using separation of variables. Assuming that the solution is of the form $u(x, t) = X(x)T(t)$, we get the following differential equation
+To solve the heat equation analytically, we observe that both the diffusion equation [](#equation:1d-diffusion) and the boundary conditions [](#equation:1d-diffusion-boundary-conditions) are linear and homogenous. This allows us to solve the equation using separation of variables. Assuming a solution of the form $u(x, t) = X(x)T(t)$, we get the following differential equation
 
 $$
 \begin{align*}
@@ -93,14 +93,14 @@ $$
 $$
 
 ##### Satisfying the Boundary Conditions
-We require that [](#equation:spatial), which is a second order linear ODE, satisfies the boundary condition
+We require that [](#equation:spatial), which is a second order linear ordinary differential equation (ODE), satisfies the boundary condition
 
 $$
 \label{equation:spatial-boundary-conditions}
   X(0) = X(\ell) = 0.
 $$
 
-This forms an eigenvalue problem, where $\lambda$ are eigenvalues of second order differentiation $\drm^2/\drm x^2$, and $X$ are the corresponding eigenfunctions. The only non-trivial solution for [](#equation:spatial) occurs for eigenvalues $\lambda > 0$, in which case $X$ has solutions of the form
+The spatial equation [](#equation:spatial) together with the boundary conditions define an eigenvalue problem, where $\lambda$ are eigenvalues of the second order differential operator $\drm^2/\drm x^2$, and $X$ are the corresponding eigenfunctions. The only non-trivial solution to [](#equation:spatial) occurs for eigenvalues $\lambda > 0$, in which case $X$ has solutions of the form
 
 $$
   X(x) = B \sin(\sqrt{\lambda}x) + C\cos(\sqrt{\lambda}x) 
@@ -125,16 +125,16 @@ $$
 The temporal equation [](#equation:temporal) is a first order linear ODE with general solutions
 
 $$
-  T_n(t) = A e^{-\lambda_n t} = A e^{-(n\pi/\ell)^2 t},\; n\in\N_+
+  T_n(t) = A_n e^{-\lambda_n t} = A_n e^{-(n\pi/\ell)^2 t},\; n\in\N_+
 $$
 
-Thus, for every eigenvalue $\lambda_n = (n\pi/\ell)^2$ with eigenfunction $X_n$, there is a solution $T_n$ such that the function 
+Thus, for every eigenvalue $\lambda_n = (n\pi/\ell)^2$ with corresponding eigenfunction $X_n$, there is a solution $T_n$ such that the function 
 
 $$
-  u_n (x,t) = T_n (t) X_n = D_n \sin\left(\frac{n\pi}{\ell}\right) e^{-(n\pi/\ell)^2 t},\; D_n = A B_n
+  u_n (x,t) = T_n (t) X_n = D_n \sin\left(\frac{n\pi}{\ell}\right) e^{-(n\pi/\ell)^2 t},\; D_n = A_n B_n
 $$
 
-solves the diffusion equation [](#equation:1d-diffusion) with Dirichlet boundary conditions. Due to the linearity of the diffusion equation,  every linear combination of $u_n$ for $n\in\N_+$ is also a solution. Thus, the general solution can be written as an infinite series of the form
+solves the diffusion equation [](#equation:1d-diffusion) with Dirichlet boundary conditions. Due to the linearity of the diffusion equation, every linear combination of $u_n$ for $n\in\N_+$ is also a solution. The general solution can therefore be written as an infinite series of the form
 
 $$
   u(x, t) = \sum_{n=1}^\infty u_n (x,t)
@@ -195,8 +195,8 @@ This derivation of the explicit forward Euler scheme for the one-dimensional dif
 
 $$
 \begin{align*}
-  x_i = i\Delta x, 0 \leq i& \leq n + 1 \\
-  t_j = j\Delta t, j \geq& 0.
+  x_i =& i\Delta x,\; 0 \leq i \leq n + 1 \\
+  t_j =& j\Delta t,\; j \geq 0.
 \end{align*}
 $$
 
@@ -230,7 +230,7 @@ $$
   u_{i,j+1} = \rho u_{i-1, j} + (1 - 2\rho)u_{i,j} + \rho u_{i+1, j}
 $$
 
-with stability condition [@note_hjortjensen_2015]
+with stability condition
 
 $$
 \label{equation:1d-diffusion-euler-stability-criterion}
@@ -239,7 +239,7 @@ $$
 
 ### Feedforward Neural Network Solver
 
-In order to solve the one-dimensional diffusion equation using feedforward neural network (FFNN), we construct a possible trial solution for [](#equation:1d-diffusion) of the form [@note_hjortjensen_2023]
+In order to solve the one-dimensional diffusion equation using a feedforward neural network (FFNN), we construct a possible trial solution for [](#equation:1d-diffusion) of the form [@note_hjortjensen_2023]
 
 $$
   \hat{u} (x, t; P) = h_1 (x, t) + h_2 [x, t, N(x, t; P)],
@@ -265,7 +265,7 @@ Possible solutions satisfying these conditions are $h_2 (x, t) = \frac{x}{\ell}(
 
 $$
 \begin{align*}
-  h_1 (x, t) =& (1 - t)\left(u(x, 0) - \left(\left(1 - \frac{x}{\ell}\right)u(0, 0) + \frac{x}{\ell} u(0, 0)\right)\right) \\
+  h_1 (x, t) =& (1 - t)\left(u(x, 0) - \left[\left(1 - \frac{x}{\ell}\right)u(0, 0) + \frac{x}{\ell} u(0, 0)\right]\right) \\
   =& (1 - t) u(x, 0) = (1 - t)\sin\left(\frac{\pi}{\ell} x\right),
 \end{align*}
 $$
@@ -276,13 +276,13 @@ $$
   \hat{u} (x,t; P) = (1 - t)\sin\left(\frac{\pi}{\ell}x\right) + \frac{x}{\ell}\left(1 - \frac{x}{\ell}\right)t N(x, t; P).
 $$
 
-The optimal trial solution is given by model parameters $P$ that minimize the resdiuals of [](#equation:1d-diffusion). At a single point $(x, t)\in [0,\ell]\times[0,\infty)$, we must therefore solve the following minimization problem:
+The optimal trial solution is given by model parameters $P$ that minimize the resdiuals of the heat equation [](#equation:1d-diffusion). At a single point $(x, t)\in [0,\ell]\times[0,\infty)$, we must therefore solve the following minimization problem:
 
 $$
   \argmin_{P} \left(\frac{\partial}{\partial t} \hat{u}(x, t; P) - \frac{\partial^2}{\partial x^2} \hat{u}(x, t; P) \right)^2.
 $$
 
-If we evaluate the FFNN model over a set of $N\in\N_+$ points $\Set{(x_n, t_n)}_{n=1}^N$, the total cost we need to minimize is given by
+If we evaluate the FFNN model over a set of $N\in\N_+$ points, $\Set{(x_n, t_n)}_{n=1}^N$, the total cost we need to minimize is given by
 
 $$
   C(x,t; P) = \frac{1}{N_x N_t} \sum_{i=1}^{N_x} \sum_{j=1}^{N_t} \left(\frac{\partial}{\partial t} \hat{u}(x_i, t_j; P) - \frac{\partial^2}{\partial x^2} \hat{u}(x_i, t_j; P) \right).
@@ -318,7 +318,7 @@ Plots of explicit Euler approximations with step $\Delta x = 0.1$ to the one-dim
 
 ### Complexity Grid Search
 
-We performed a grid search to examine stability of the neural PDE solver as functions of hidden layers and number of nodes. The search was conducted over combinations of $1$ to $3$ hidden layers, and neuron configurations ranging from $2^3 = 8$ to $2^7 = 128$. The search utilized the sigmoid activation function, with a training setup consisting of $10$ spatial and $10$ temporal points. Training was performed for $1000$ epochs. The results of the grid search are presented in [](#figure:1d-diffusion-neurons-layers-loss) and [](#table:1d-diffusion-grid-search).
+We performed a grid search to examine stability of the neural PDE solver as functions of hidden layers and number of nodes. The search was conducted over combinations of $1$ to $3$ hidden layers, and neuron configurations ranging from $2 = 8$ to $2 = 128$. The search utilized the sigmoid activation function, with a training setup consisting of $10$ spatial and $10$ temporal points. Training was performed for $1000$ epochs. The results of the grid search are presented in [](#figure:1d-diffusion-neurons-layers-loss) and [](#table:1d-diffusion-grid-search).
 
 The grid search results indicate that the stability of the neural PDE solver generally improves as the model complexity increases. Specifically, three-layer models tend to outperform those with fewer layers, except in cases where the models have a very low number of neurons per layer. This trend is expected, as the dynamic nature of the heat equation requires a sufficient level of model complexity to capture its behavior. However, this increased complexity comes with the trade-off of longer training times. Finally, no clear trend emerges regarding the optimal number of neurons per layer or the arrangement of high versus low neuron layers.
 
@@ -350,15 +350,15 @@ Scatter plot showing the final loss of the neural PDE solver as a function of th
 
 ### Comparison of Activation Function
 
-Following the grid search, we evaluated the stability of the neural PDE solver with different activation functions. The tests were conducted using the hidden layer configuration $(128, 64, 128)$, which was selected as a balanced choice, offering a good trade-off between performance and training time. The results are summarized in [](#table:1d-diffusion-activation). 
+Following the grid search, we evaluated the stability of the neural PDE solver with different activation functions. The tests were conducted using the hidden layer configuration $(32, 128, 64)$, which was selected as a balanced choice, offering a good trade-off between performance and training time. The results are summarized in [](#table:1d-diffusion-activation). 
 
-Interestingly, the sigmoid activation function performed relatively well, achieving a moderate final loss. This suggests that the sigmoid function is not prone to the vanishing gradient problem in this particular setup, which is often a concern in deeper networks. In contrast, the rectified linear unit (ReLU) function performed poorly, yielding a significantly higher final loss, indicating that it struggles to effectively approximate the dynamics of the heat equation.
+Interestingly, the sigmoid activation function performed relatively well, achieving a moderate final loss. This suggests that the sigmoid function is not prone to the vanishing gradient problem in this particular setup, which is often a concern in deeper networks. In contrast, the rectified linear unit (ReLU) function performed poorly, yielding a significantly higher final loss, indicating that it is unsuitable for approximating the heat equation.
 
 Leaky ReLU showed an improvement over ReLU as expected, but still lagged behind other activation functions in terms of stability and final loss. While it helps to alleviate the issue of dying neurons, it was not as effective as more complex activations.
 
-The exponential linear unit (ELU) produced a final loss similar to that of the sigmoid function, suggesting it has a comparable ability to capture the heat equation's dynamics. However, its performance was still outpaced by the hyperbolic tangent (tanh) function, which achieved lower loss at comparable computation cost. Lastly, the Sigmoid Linear Unit (SiLU) activation function, also known as Swish, yielded the best performance overall, achieving the lowest final loss. However, it comes at the cost of slightly longer training times compared with tanh.
+The exponential linear unit (ELU) performed comparatively to the sigmoid function, suggesting it is more suitable than (Leaky) ReLU to approximate the heat equation. However, its performance was still worse than the hyperbolic tangent (tanh) function, which achieved lower loss at comparable computation cost. Lastly, the Sigmoid Linear Unit (SiLU) activation function, also known as Swish, yielded the best performance overall, achieving the lowest final loss. However, it comes at the cost of slightly longer training times compared with tanh.
 
-:::{table} Comparison of activation functions used in the neural PDE solver, showing final loss values and corresponding training times. The models were trained with the hidden layer configuration $(128, 64, 128)$ for each activation function.
+:::{table} Comparison of activation functions used in the neural PDE solver, showing final loss values and corresponding training times. The models were trained with the hidden layer configuration $(32, 128, 64)$ for each activation function.
 :label: table:1d-diffusion-activation
 :align: center
 
@@ -388,9 +388,9 @@ Heatmaps comparing the absolute errors of solutions to the one-dimensional heat 
 
 In this section we give a critical discussion of the two approaches for solving differential equation examined in this report: explicit forward Euler scheme and feedforward neural networks.
 
-One clear advantage of neural networks is their ability to approximate solutions over continuous domains. This makes neural models more flexible, as they can potentially capture complex, non-linear dynamics. In contrast, Euler's method is inherently discrete, as it approximates the solution by stepping through time and space at fixed intervals. This discretization can introduce limitations, especially for regions with sharp gradients or highly localized phenomena. Neural models, by their continuous nature, allow for capturing such intricate behaviors, provided sufficient training data and model complexity.
+One clear advantage of neural networks is their ability to approximate solutions over continuous domains. This makes neural models more flexible, as they can potentially capture complex, non-linear dynamics. In contrast, Euler's method is inherently discrete, as it approximates the solution by stepping through time and space at fixed intervals. This discretization can lead to poor approximations for regions with sharp gradients or highly localized phenomena. Neural models, by their continuous nature, allow for capturing such intricate behaviors, provided sufficient training data and model complexity.
 
-A key strength of the Euler method lies in its well-understood stability conditions. This predictability makes the method more reliable and easier to implement, particularly for simpler problems. However, the stability constraints inherent in the method can limit its accuracy, especially when fine temporal and spatial resolution is required. These limitations become more pronounced in the presence of complex or rapidly changing dynamics, where the fixed discretization may not be sufficient to capture the full range of behaviors accurately.
+A key strength of the Euler method lies in its well-understood stability conditions and computational efficiency. This predictability makes the method more reliable and easier to implement, particularly for simpler problems. However, as a first-order method, Euler's method can struggle to maintain high accuracy for nonlinear equations, leading to significant approximation errors. To achieve higher accuracy, smaller time steps or more sophisticated methods, such as implicit schemes, may be required. However, these approaches typically come with increased computational cost.
 
 Neural networks, on the other hand, present challenges in training to effectively capture complex dynamics. Understanding how a network arrives at a particular solution is more opaque compared to finite difference methods, where the process is more straightforward and interpretable. The stability conditions for neural networks are not as well-defined, and ensuring convergence to the true solution requires extensive optimization, including the selection of an optimal network structure, activation functions, and hyperparameters. Additionally, the training process for neural networks can be computationally demanding and time-consuming, particularly for more complex systems. This often involves navigating a vast search space for model configurations, making it difficult to guarantee optimal performance without significant computational resources and experimentation.
 
