@@ -1,0 +1,35 @@
+[mypy]
+plugins = [
+  "numpy.typing.mypy_plugin",
+  "pandara.mypy",
+  "pydantic.mypy"
+]
+explicit_package_bases = true
+#namespace_packages = false
+
+[tool.ruff]
+indent-width = 2
+
+[tool.ruff.format]
+quote-style = "double"
+
+[project]
+dependencies = [
+  "autograd",
+  "flax",
+  "jax",
+  "matplotlib",
+  "numpy",
+  "mystmd",
+  "pandas",
+  "seaborn",
+  "tabulate",
+  "tensorflow"
+]
+
+[project.optional-dependencies]
+dev = [
+  "ipykernel",
+  "mypy",
+  "ruff",
+]
