@@ -1,1 +1,10 @@
+autograd
+flax
+jax
+matplotlib
 mystmd
+numpy
+pandas
+seaborn
+tabulate
+tensorflow

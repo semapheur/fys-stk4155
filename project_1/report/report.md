@@ -12,7 +12,7 @@ exports:
     showtoc: true
 math:
   # Note the 'single quotes'
-  '\argmin': '\arg\min'
+  '\argmin': '\operatorname{argmin}'
   '\R': '\mathbb{R}'
   '\Set': '{\left\{ #1 \right\}}'
 bibliography: references.bib

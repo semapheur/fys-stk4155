@@ -52,12 +52,13 @@ packages:
   - booktabs
   - caption
   - datetime
+  - fontenc
   - geometry
   - graphicx
   - hyperref
   - inputenc
   - listings
-  - listingы
+  - lmodern
   - natbib
   - siunitx
   - titlesec
