@@ -1,0 +1,40 @@
+[project]
+name = "fys-stk4155"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "autograd",
+  "flax",
+  "ipykernel",
+  "jax",
+  "matplotlib",
+  "numpy",
+  "mystmd",
+  "pandas",
+  "seaborn",
+  "tabulate",
+  "tensorflow"
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy",
+  "ruff"
+]
+
+[mypy]
+plugins = [
+  "numpy.typing.mypy_plugin",
+  "pandara.mypy",
+  "pydantic.mypy"
+]
+explicit_package_bases = true
+#namespace_packages = false
+
+[tool.ruff]
+indent-width = 2
+
+[tool.ruff.format]
+quote-style = "double"

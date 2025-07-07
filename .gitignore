@@ -1,0 +1,14 @@
+__pycache__
+.venv
+.vscode
+.mypy_cache
+*.env
+
+build
+**/_build
+*.egg-info
+
+**/*.aux
+**/*.log
+**/*.synctex.gz
+**/*.toc

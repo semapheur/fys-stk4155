@@ -1,0 +1,26 @@
+\documentclass{standalone}
+\usepackage{amsmath, calc, tikz, tikz-3dplot}
+%\usetikzlibrary{3d}
+
+\def\size{3}
+\tdplotsetmaincoords{75}{240}
+\begin{document}
+\begin{tikzpicture}[tdplot_main_coords, every node/.style={font=\footnotesize}]
+  \coordinate (O) at (0,0,0);
+  \coordinate (y_hat) at (\size, \size, 0);
+  \coordinate (y) at (\size, \size, \size);
+
+  \draw[] (-2,-1,0) -- (\size+2,-1,0) -- (\size+2,\size+2,0) -- (-2,\size+2,0) -- cycle;
+  \node at (\size+1,\size+1) {$\operatorname{col}(\mathbf{X})$};
+
+  \draw[thick, ->] (O) -- (y_hat) node[anchor=east]{$\mathbf{X}\hat{\boldsymbol{\beta}}$};
+  \draw[thick, ->] (O) -- (y) node[anchor=east]{$\mathbf{y}$};
+  \draw[dashed] (y) -- (y_hat) node[midway, anchor=east]{$\boldsymbol{\varepsilon} = \mathbf{y} - \mathbf{X}\hat{\boldsymbol{\beta}}$};
+  \draw[->] (O) -- ++(0,\size,0) node[anchor=north]{$\hat{\beta}_1 \mathbf{x}_1$};
+  \draw[->] (O) -- ++(\size,0,0) node[anchor=south east]{$\hat{\beta}_2 \mathbf{x}_2$};
+
+  \draw[dashed] (y_hat) -- ++(0,-\size,0);
+  \draw[dashed] (y_hat) -- ++(-\size,0,0);
+
+\end{tikzpicture}
+\end{document}
